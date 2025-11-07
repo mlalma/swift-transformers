@@ -4,6 +4,7 @@
 //
 //  Created by Lassi Maksimainen on 07.11.2025.
 //
+import Foundation
 
 enum ModelMapping {
 }
@@ -19,5 +20,9 @@ extension ModelMapping {
 
   static let causalLMNames: [String: String] = [
     "nanochat": "NanoChatForCausalLM"
+  ]
+  
+  static let configNames: [String: String] = [
+    "nanochat": "NanoChatConfig"
   ]
 }

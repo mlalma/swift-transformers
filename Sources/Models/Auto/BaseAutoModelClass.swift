@@ -1,4 +1,5 @@
 import Foundation
+import Hub
 
 public class BaseAutoModelClass {
   internal var modelMapping: [String: String]!
@@ -8,8 +9,10 @@ public class BaseAutoModelClass {
   }
   
   internal func fromPretrained(pretrainedModelNameOrPath: (String, String), modelArguments: [String: Any]) {
-    var configArgument = modelArguments["config"]
-    
-    // if let configArgument, conf
+    var modelConfig = modelArguments["config"] as? Config
+        
+    if modelConfig == nil {
+      
+    }
   }
 }

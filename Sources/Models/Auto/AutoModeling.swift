@@ -15,7 +15,7 @@ public class AutoModelForCausalLM: BaseAutoModelClass {
     super.init()
   }
   
-  static func fromPretrained(pretrainedModelNameOrPath: (String, String), modelArguments: [String: Any]) {
+  static public func fromPretrained(pretrainedModelNameOrPath: (String, String), modelArguments: [String: Any]) {
     let model = AutoModelForCausalLM()
     model.fromPretrained(pretrainedModelNameOrPath: pretrainedModelNameOrPath, modelArguments: modelArguments)
     
