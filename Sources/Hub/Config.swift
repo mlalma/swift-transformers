@@ -610,7 +610,7 @@ public struct Config: Hashable, Sendable,
         return Config()
     }
 
-    func uncamelCase(_ string: BinaryDistinctString) -> BinaryDistinctString {
+    public func uncamelCase(_ string: BinaryDistinctString) -> BinaryDistinctString {
         let scalars = string.string.unicodeScalars
         var result = ""
 

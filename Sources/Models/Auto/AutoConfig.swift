@@ -15,9 +15,9 @@ class AutoConfig {
     return nil
   }
   
-  static func fromPretrained(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) {
-    if let configDict = PreTrainedConfig.getConfigDict(pretrainedModelNameOrPath, modelArguments: modelArguments) {
-      if let modelType = configDict["modelType"] {        
+  static func fromPretrained(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) async {
+    if let configDict = await PreTrainedConfig.getConfigDict(pretrainedModelNameOrPath, modelArguments: modelArguments) {
+      if let modelType = configDict["modelType", String.self] {
       }
     }
   }
