@@ -19,6 +19,7 @@ let package = Package(
   dependencies: [
     .package(url: "https://github.com/huggingface/swift-jinja.git", from: "2.0.0"),
     .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.29.1"),
+    .package(url: "https://github.com/mxcl/Version.git", from: "2.0.0")
   ],
   targets: [
     .target(
@@ -37,7 +38,8 @@ let package = Package(
         "Tokenizers",
         "Generation",
         .product(name: "MLX", package: "mlx-swift"),
-        .product(name: "MLXNN", package: "mlx-swift")
+        .product(name: "MLXNN", package: "mlx-swift"),
+        .product(name: "Version", package: "Version")
       ]
     ),
     .target(

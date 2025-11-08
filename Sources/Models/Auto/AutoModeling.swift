@@ -1,9 +1,4 @@
-//
-//  AutoModeling.swift
-//  swift-transformers
-//
-//  Created by Lassi Maksimainen on 07.11.2025.
-//
+import Foundation
 
 // 1. Configuration loading phase
 // 2. Model class determination phase
@@ -15,11 +10,8 @@ public class AutoModelForCausalLM: BaseAutoModelClass {
     super.init()
   }
   
-  static public func fromPretrained(pretrainedModelNameOrPath: (String, String), modelArguments: [String: Any]) {
+  static public func fromPretrained(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) {
     let model = AutoModelForCausalLM()
-    model.fromPretrained(pretrainedModelNameOrPath: pretrainedModelNameOrPath, modelArguments: modelArguments)
-    
-    
-    
+    model.fromPretrained(pretrainedModelNameOrPath, modelArguments: modelArguments)
   }
 }
