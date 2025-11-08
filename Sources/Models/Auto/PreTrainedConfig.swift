@@ -266,50 +266,37 @@ class PreTrainedConfig {
 
 extension PreTrainedConfig {
   private static func parseConfigurationFile(_ pretrainedModelNameOrPath: String, configurationFile: String? = nil, modelArguments: [String: Any]) -> [String: Any]? {
-    
+    // TO_DO: Code this next
     return nil
   }
   
-  private static func getConfigurationFile(_ files: [String]) -> String? {
-    /*
-     configuration_files_map = {}
-         for file_name in configuration_files:
-             if file_name.startswith("config.") and file_name.endswith(".json") and file_name != "config.json":
-                 v = file_name.removeprefix("config.").removesuffix(".json")
-                 configuration_files_map[v] = file_name
-         available_versions = sorted(configuration_files_map.keys())
-
-         # Defaults to FULL_CONFIGURATION_FILE and then try to look at some newer versions.
-         configuration_file = CONFIG_NAME
-         transformers_version = version.parse(__version__)
-         for v in available_versions:
-             if version.parse(v) <= transformers_version:
-                 configuration_file = configuration_files_map[v]
-             else:
-                 # No point going further since the versions are sorted.
-                 break
-
-         return configuration_file
-     */
+  static func getConfigurationFile(_ files: [String]) -> String? {
+    struct Constants {
+      static let defaultConfigFile = "config.json"
+      static let configPrefix = "config."
+      static let configSuffix = ".json"
+    }
     
     var configurationFilesMap: [String: String] = [:]
     
     for fileName in files {
-      if fileName.hasPrefix("config.") && fileName.hasSuffix(".json") && fileName != "config.json" {
+      if fileName.hasPrefix(Constants.configPrefix),
+         fileName.hasSuffix(Constants.configSuffix),
+         fileName != Constants.defaultConfigFile {
         // Remove "config." prefix and ".json" suffix to get version
         var version = fileName
-        if version.hasPrefix("config.") {
-          version = String(version.dropFirst("config.".count))
+        if version.hasPrefix(Constants.configPrefix) {
+          version = String(version.dropFirst(Constants.configPrefix.count))
         }
-        if version.hasSuffix(".json") {
-          version = String(version.dropLast(".json".count))
+        if version.hasSuffix(Constants.configSuffix) {
+          version = String(version.dropLast(Constants.configSuffix.count))
         }
         configurationFilesMap[version] = fileName
       }
     }
     
     // Perform semantic sort
-    let availableVersions =
+    var availableVersions =
       configurationFilesMap
         .keys
         .map { ($0, try? Version($0)) }
@@ -324,21 +311,20 @@ extension PreTrainedConfig {
         }
         .map { $0.0 }
     
-    // Defaults to the standard
+    // Defaults to the standard if can't parse version numbers properly
     var configurationFile = "config.json"
-    
+        
     // Get transformers version
     if let transformersVersion = try? Version(ModelUtils.version) {
       for version in availableVersions {
-        // Simple string comparison for now - should implement proper semantic versioning
         if let configVersion = try? Version(version) {
           if configVersion <= transformersVersion,
              let versionConfigFile = configurationFilesMap[version] {
             configurationFile = versionConfigFile
+          } else {
+            // No point going further since the versions are sorted.
+            break
           }
-        } else {
-          // No point going further since the versions are sorted.
-          break
         }
       }
     }
@@ -353,33 +339,12 @@ extension PreTrainedConfig {
     
     var configDict = parseConfigurationFile(pretrainedModelNameOrPath, modelArguments: modelArguments)
     
-    // TO_DO: Parse configuration dictionary
-
     if let configurationFileListValue = configDict?["Constants.configurationFiles"],
        let configurationFileList = configurationFileListValue as? [String],
        let configurationFile = PreTrainedConfig.getConfigurationFile(configurationFileList) {
       configDict = parseConfigurationFile(pretrainedModelNameOrPath, configurationFile: configurationFile, modelArguments: modelArguments)
     }
-      
-    /*
-     
-     original_kwargs = copy.deepcopy(kwargs)
-             # Get config dict associated with the base config file
-             config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
-             if config_dict is None:
-                 return {}, kwargs
-             if "_commit_hash" in config_dict:
-                 original_kwargs["_commit_hash"] = config_dict["_commit_hash"]
-
-             # That config file may point us toward another config file to use.
-             if "configuration_files" in config_dict:
-                 configuration_file = get_configuration_file(config_dict["configuration_files"])
-                 config_dict, kwargs = cls._get_config_dict(
-                     pretrained_model_name_or_path, _configuration_file=configuration_file, **original_kwargs
-                 )
-     
-     */
-    
-    return nil
+          
+    return configDict
   }
 }
