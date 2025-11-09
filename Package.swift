@@ -3,11 +3,6 @@
 
 import PackageDescription
 
-/// Define the strict concurrency settings to be applied to all targets.
-let swiftSettings: [SwiftSetting] = [
-    .enableExperimentalFeature("StrictConcurrency"),
-]
-
 let package = Package(
     name: "swift-transformers",
     platforms: [.iOS(.v18), .macOS(.v15)],
@@ -29,8 +24,7 @@ let package = Package(
         .target(
             name: "Hub",
             dependencies: [.product(name: "Jinja", package: "swift-jinja")],
-            resources: [.process("Resources")],
-            swiftSettings: swiftSettings
+            resources: [.process("Resources")]
         ),
         .target(
             name: "Models",
@@ -52,8 +46,7 @@ let package = Package(
         ),
         .testTarget(
             name: "HubTests",
-            dependencies: ["Hub", .product(name: "Jinja", package: "swift-jinja")],
-            swiftSettings: swiftSettings
+            dependencies: ["Hub", .product(name: "Jinja", package: "swift-jinja")]
         ),
         .testTarget(
             name: "ModelsTests",

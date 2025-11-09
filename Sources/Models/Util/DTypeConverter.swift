@@ -31,9 +31,16 @@ extension ModelUtils {
             return nil
         case "CompleteFloatStorage":
             return .complex64
-        case "QUInt8Storage", "QInt8Storage", "QInt32Storage",
-             "QUInt4x2Storage", "QUInt2x4Storage":
-            return nil
+        case "QUInt8Storage":
+            return .uint8
+        case "QInt8Storage":
+            return .int8
+        case "QInt32Storage":
+            return .int32
+        case "QUInt4x2Storage":
+            return .uint8
+        case "QUInt2x4Storage":
+            return .uint8
         default:
             return nil
         }
