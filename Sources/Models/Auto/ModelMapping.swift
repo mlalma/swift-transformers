@@ -1,10 +1,5 @@
-//
-//  ModelMapping.swift
-//  swift-transformers
-//
-//  Created by Lassi Maksimainen on 07.11.2025.
-//
 import Foundation
+import Hub
 
 enum ModelMapping {}
 
@@ -21,7 +16,7 @@ extension ModelMapping {
         "nanochat": "NanoChatForCausalLM",
     ]
 
-    static let configNames: [String: String] = [
-        "nanochat": "NanoChatConfig",
+    nonisolated(unsafe) static let configNames: [String: (Config) -> PreTrainedConfig] = [
+        "nanochat": { NanoChatConfig(fromConfig: $0) },
     ]
 }

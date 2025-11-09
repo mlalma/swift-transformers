@@ -1,23 +1,9 @@
 import Foundation
+import Hub
 import MLX
 import Version
 
-/// Base class for all configuration classes. Handles a few parameters common to all models' configurations.
-///
-/// A configuration file can be loaded and saved to disk. Loading the configuration file and using this file to
-/// initialize a model does **not** load the model weights. It only affects the model's configuration.
-///
-/// Class attributes (overridden by derived classes):
-/// - `modelType`: An identifier for the model type, serialized into the JSON file, and used to recreate the correct object.
-/// - `hasNoDefaultsAtInit`: Whether the config class can be initialized without providing input arguments.
-/// - `keysToIgnoreAtInference`: A list of keys to ignore by default when looking at dictionary outputs of the model during inference.
-/// - `attributeMap`: A dict that maps model specific attribute names to the standardized naming of attributes.
-///
-/// Common attributes (present in all subclasses):
-/// - `vocabSize`: The number of tokens in the vocabulary, which is also the first dimension of the embeddings matrix.
-/// - `hiddenSize`: The hidden size of the model.
-/// - `numAttentionHeads`: The number of attention heads used in the multi-head attention layers of the model.
-/// - `numHiddenLayers`: The number of blocks in the model.
+/// Base class for all model configurations. Handles parameters that are common to most models' configurations.
 class PreTrainedConfig {
     // Model type
     var modelType: String?
@@ -127,17 +113,17 @@ class PreTrainedConfig {
 
     init(
         modelType: String? = nil,
-        outputHiddenStates: Bool = false,
-        outputAttentions: Bool = false,
-        returnDict: Bool = true,
+        outputHiddenStates: Bool = Constants.outputHiddenStates,
+        outputAttentions: Bool = Constants.outputAttentions,
+        returnDict: Bool = Constants.returnDict,
         dtype: String? = nil,
-        tieWordEmbeddings: Bool = true,
-        chunkSizeFeedForward: Int = 0,
-        isEncoderDecoder: Bool = false,
-        isDecoder: Bool = false,
+        tieWordEmbeddings: Bool = Constants.tieWordEmbeddings,
+        chunkSizeFeedForward: Int = Constants.chunkSizeFeedForward,
+        isEncoderDecoder: Bool = Constants.isEncoderDecoder,
+        isDecoder: Bool = Constants.isDecoder,
         crossAttentionHiddenSize: Int? = nil,
-        addCrossAttention: Bool = false,
-        tieEncoderDecoder: Bool = false,
+        addCrossAttention: Bool = Constants.addCrossAttention,
+        tieEncoderDecoder: Bool = Constants.tieEncoderDecoder,
         architectures: [String]? = nil,
         finetuningTask: String? = nil,
         id2label: [Int: String]? = nil,
@@ -152,9 +138,35 @@ class PreTrainedConfig {
         eosTokenId: Int? = nil,
         sepTokenId: Int? = nil,
         decoderStartTokenId: Int? = nil,
-        nameOrPath: String = "",
+        nameOrPath: String = Constants.nameOrPath,
         ropeParameters: RopeParameters? = nil,
-        additionalParams: [String: Any] = [:]
+        additionalParams: [String: Any] = [:],
+        // Generation defaults
+        maxLength: Int? = Constants.maxLength,
+        minLength: Int? = Constants.minLength,
+        doSample: Bool? = Constants.doSample,
+        earlyStopping: Bool? = Constants.earlyStopping,
+        numBeams: Int? = Constants.numBeams,
+        temperature: Double? = Constants.temperature,
+        topK: Int? = Constants.topK,
+        topP: Double? = Constants.topP,
+        typicalP: Double? = Constants.typicalP,
+        repetitionPenalty: Double? = Constants.repetitionPenalty,
+        lengthPenalty: Double? = Constants.lengthPenalty,
+        noRepeatNgramSize: Int? = Constants.noRepeatNgramSize,
+        encoderNoRepeatNgramSize: Int? = Constants.encoderNoRepeatNgramSize,
+        badWordsIds: [[Int]]? = nil,
+        numReturnSequences: Int? = Constants.numReturnSequences,
+        outputScores: Bool? = Constants.outputScores,
+        returnDictInGenerate: Bool? = Constants.returnDictInGenerate,
+        forcedBosTokenId: Int? = nil,
+        forcedEosTokenId: Int? = nil,
+        removeInvalidValues: Bool? = Constants.removeInvalidValues,
+        exponentialDecayLengthPenalty: [Double]? = nil,
+        suppressTokens: [Int]? = nil,
+        beginSuppressTokens: [Int]? = nil,
+        numBeamGroups: Int? = Constants.numBeamGroups,
+        diversityPenalty: Double? = Constants.diversityPenalty
     ) {
         if let numLabels, let id2label, id2label.count != numLabels {
             ModelUtils.log("Warning: You passed `numLabels=\(numLabels)` " +
@@ -206,11 +218,108 @@ class PreTrainedConfig {
         self.ropeParameters = ropeParameters
 
         if self.id2label == nil {
-            createIdLabelMaps(numLabels: numLabels ?? 2)
+            createIdLabelMaps(numLabels: numLabels ?? Constants.numLabels)
         }
 
         // Initialize generation defaults
-        initializeGenerationDefaults()
+        self.maxLength = maxLength
+        self.minLength = minLength
+        self.doSample = doSample
+        self.earlyStopping = earlyStopping
+        self.numBeams = numBeams
+        self.temperature = temperature
+        self.topK = topK
+        self.topP = topP
+        self.typicalP = typicalP
+        self.repetitionPenalty = repetitionPenalty
+        self.lengthPenalty = lengthPenalty
+        self.noRepeatNgramSize = noRepeatNgramSize
+        self.encoderNoRepeatNgramSize = encoderNoRepeatNgramSize
+        self.badWordsIds = badWordsIds
+        self.numReturnSequences = numReturnSequences
+        self.outputScores = outputScores
+        self.returnDictInGenerate = returnDictInGenerate
+        self.forcedBosTokenId = forcedBosTokenId
+        self.forcedEosTokenId = forcedEosTokenId
+        self.removeInvalidValues = removeInvalidValues
+        self.exponentialDecayLengthPenalty = exponentialDecayLengthPenalty
+        self.suppressTokens = suppressTokens
+        self.beginSuppressTokens = beginSuppressTokens
+        self.numBeamGroups = numBeamGroups
+        self.diversityPenalty = diversityPenalty
+    }
+
+    init(fromConfig config: Config) {
+        modelType = config[ConfigKeys.modelType, String.self]
+        baseConfigKey = config[ConfigKeys.baseConfigKey, String.self] ?? Constants.baseConfigKey
+        attributeMap = config[ConfigKeys.attributeMap, [String: String].self] ?? [:]
+        returnDict = config[ConfigKeys.returnDict, Bool.self] ?? Constants.returnDict
+        outputHiddenStates = config[ConfigKeys.outputHiddenStates, Bool.self] ?? Constants.outputHiddenStates
+        dtype = ModelUtils.dtype(config[ConfigKeys.torchDtype, String.self])
+        _outputAttentions = config[ConfigKeys.outputAttentions, Bool.self] ?? Constants.outputAttentions
+        tieWordEmbeddings = config[ConfigKeys.tieWordEmbeddings, Bool.self] ?? Constants.tieWordEmbeddings
+        chunkSizeFeedForward = config[ConfigKeys.chunkSizeFeedForward, Int.self] ?? Constants.chunkSizeFeedForward
+        isEncoderDecoder = config[ConfigKeys.isEncoderDecoder, Bool.self] ?? Constants.isEncoderDecoder
+        isDecoder = config[ConfigKeys.isDecoder, Bool.self] ?? Constants.isDecoder
+        crossAttentionHiddenSize = config[ConfigKeys.crossAttentionHiddenSize, Int.self]
+        addCrossAttention = config[ConfigKeys.addCrossAttention, Bool.self] ?? Constants.addCrossAttention
+        tieEncoderDecoder = config[ConfigKeys.tieEncoderDecoder, Bool.self] ?? Constants.tieEncoderDecoder
+        architectures = config[ConfigKeys.architectures, [String].self]
+        finetuningTask = config[ConfigKeys.finetuningTask, String.self]
+        id2label = config[ConfigKeys.id2label, [Int: String].self]
+        label2id = config[ConfigKeys.label2id, [String: Int].self]
+        taskSpecificParams = config[ConfigKeys.taskSpecificParams, [String: Any].self]
+        problemType = config[ConfigKeys.problemType, String.self]
+        tokenizerClass = config[ConfigKeys.tokenizerClass, String.self]
+        prefix = config[ConfigKeys.prefix, String.self]
+        bosTokenId = config[ConfigKeys.bosTokenId, Int.self]
+        padTokenId = config[ConfigKeys.padTokenId, Int.self]
+        eosTokenId = config[ConfigKeys.eosTokenId, Int.self]
+        sepTokenId = config[ConfigKeys.sepTokenId, Int.self]
+        decoderStartTokenId = config[ConfigKeys.decoderStartTokenId, Int.self]
+        nameOrPath = config[ConfigKeys.nameOrPath, String.self] ?? Constants.nameOrPath
+        commitHash = config[ConfigKeys.commitHash, String.self]
+        attnImplementationInternal = config[ConfigKeys.attnImplementation, String.self]
+        transformersVersion = config[ConfigKeys.transformersVersion, String.self]
+        maxLength = config[ConfigKeys.maxLength, Int.self] ?? Constants.maxLength
+        minLength = config[ConfigKeys.minLength, Int.self] ?? Constants.minLength
+        doSample = config[ConfigKeys.doSample, Bool.self] ?? Constants.doSample
+        earlyStopping = config[ConfigKeys.earlyStopping, Bool.self] ?? Constants.earlyStopping
+        numBeams = config[ConfigKeys.numBeams, Int.self] ?? Constants.numBeams
+        temperature = config[ConfigKeys.temperature, Double.self] ?? Constants.temperature
+        topK = config[ConfigKeys.topK, Int.self] ?? Constants.topK
+        topP = config[ConfigKeys.topP, Double.self] ?? Constants.topP
+        typicalP = config[ConfigKeys.typicalP, Double.self] ?? Constants.typicalP
+        repetitionPenalty = config[ConfigKeys.repetitionPenalty, Double.self] ?? Constants.repetitionPenalty
+        lengthPenalty = config[ConfigKeys.lengthPenalty, Double.self] ?? Constants.lengthPenalty
+        noRepeatNgramSize = config[ConfigKeys.noRepeatNgramSize, Int.self] ?? Constants.noRepeatNgramSize
+        encoderNoRepeatNgramSize = config[ConfigKeys.encoderNoRepeatNgramSize, Int.self] ?? Constants.encoderNoRepeatNgramSize
+        badWordsIds = config[ConfigKeys.badWordsIds, [[Int]].self]
+        numReturnSequences = config[ConfigKeys.numReturnSequences, Int.self] ?? Constants.numReturnSequences
+        outputScores = config[ConfigKeys.outputScores, Bool.self] ?? Constants.outputScores
+        returnDictInGenerate = config[ConfigKeys.returnDictInGenerate, Bool.self] ?? Constants.returnDictInGenerate
+        forcedBosTokenId = config[ConfigKeys.forcedBosTokenId, Int.self]
+        forcedEosTokenId = config[ConfigKeys.forcedEosTokenId, Int.self]
+        removeInvalidValues = config[ConfigKeys.removeInvalidValues, Bool.self] ?? Constants.removeInvalidValues
+        exponentialDecayLengthPenalty = config[ConfigKeys.exponentialDecayLengthPenalty, [Double].self]
+        suppressTokens = config[ConfigKeys.suppressTokens, [Int].self]
+        beginSuppressTokens = config[ConfigKeys.beginSuppressTokens, [Int].self]
+        numBeamGroups = config[ConfigKeys.numBeamGroups, Int.self] ?? Constants.numBeamGroups
+        diversityPenalty = config[ConfigKeys.diversityPenalty, Double.self] ?? Constants.diversityPenalty
+
+        // RopeParameters - if present in config
+        if let ropeParameters = config[ConfigKeys.ropeParameters, Config.self] {
+            self.ropeParameters = RopeParameters(fromConfig: ropeParameters)
+        }
+
+        // Additional properties - store any unrecognized keys
+        additionalProperties = [:]
+
+        // Create id2label and label2id maps if not present
+        if id2label == nil {
+            let numLabels = config[ConfigKeys.numLabels, Int.self] ?? Constants.numLabels
+            createIdLabelMaps(numLabels: numLabels)
+        }
     }
 
     private func createIdLabelMaps(numLabels: Int) {
@@ -227,39 +336,118 @@ class PreTrainedConfig {
         label2id = label2idMap
     }
 
-    private func initializeGenerationDefaults() {
-        // Initialize generation defaults for backward compatibility
-        maxLength = 20
-        minLength = 0
-        doSample = false
-        earlyStopping = false
-        numBeams = 1
-        temperature = 1.0
-        topK = 50
-        topP = 1.0
-        typicalP = 1.0
-        repetitionPenalty = 1.0
-        lengthPenalty = 1.0
-        noRepeatNgramSize = 0
-        encoderNoRepeatNgramSize = 0
-        badWordsIds = nil
-        numReturnSequences = 1
-        outputScores = false
-        returnDictInGenerate = false
-        forcedBosTokenId = nil
-        forcedEosTokenId = nil
-        removeInvalidValues = false
-        exponentialDecayLengthPenalty = nil
-        suppressTokens = nil
-        beginSuppressTokens = nil
-        numBeamGroups = 1
-        diversityPenalty = 0.0
-    }
-
     /// Updates attributes of this class with attributes from a dictionary.
     func update(configDict: [String: Any]) {
         for (key, value) in configDict {
             additionalProperties[key] = value
         }
+    }
+
+    /// Default values for configuration parameters
+    enum Constants {
+        // Common attributes
+        static let returnDict = true
+        static let outputHiddenStates = false
+        static let outputAttentions = false
+
+        // Less common properties
+        static let tieWordEmbeddings = true
+        static let chunkSizeFeedForward = 0
+
+        // Encoder-decoder model attributes
+        static let isEncoderDecoder = false
+        static let isDecoder = false
+        static let addCrossAttention = false
+        static let tieEncoderDecoder = false
+
+        // Generation defaults
+        static let maxLength = 20
+        static let minLength = 0
+        static let doSample = false
+        static let earlyStopping = false
+        static let numBeams = 1
+        static let temperature = 1.0
+        static let topK = 50
+        static let topP = 1.0
+        static let typicalP = 1.0
+        static let repetitionPenalty = 1.0
+        static let lengthPenalty = 1.0
+        static let noRepeatNgramSize = 0
+        static let encoderNoRepeatNgramSize = 0
+        static let numReturnSequences = 1
+        static let outputScores = false
+        static let returnDictInGenerate = false
+        static let removeInvalidValues = false
+        static let numBeamGroups = 1
+        static let diversityPenalty = 0.0
+
+        // Label defaults
+        static let numLabels = 2
+
+        // String defaults
+        static let nameOrPath = ""
+        static let baseConfigKey = ""
+    }
+
+    /// Config key names (snake_case strings used in configuration files)
+    enum ConfigKeys {
+        static let modelType = "model_type"
+        static let baseConfigKey = "base_config_key"
+        static let attributeMap = "attribute_map"
+        static let returnDict = "return_dict"
+        static let outputHiddenStates = "output_hidden_states"
+        static let torchDtype = "torch_dtype"
+        static let outputAttentions = "output_attentions"
+        static let tieWordEmbeddings = "tie_word_embeddings"
+        static let chunkSizeFeedForward = "chunk_size_feed_forward"
+        static let isEncoderDecoder = "is_encoder_decoder"
+        static let isDecoder = "is_decoder"
+        static let crossAttentionHiddenSize = "cross_attention_hidden_size"
+        static let addCrossAttention = "add_cross_attention"
+        static let tieEncoderDecoder = "tie_encoder_decoder"
+        static let architectures = "architectures"
+        static let finetuningTask = "finetuning_task"
+        static let id2label = "id2label"
+        static let label2id = "label2id"
+        static let taskSpecificParams = "task_specific_params"
+        static let problemType = "problem_type"
+        static let tokenizerClass = "tokenizer_class"
+        static let prefix = "prefix"
+        static let bosTokenId = "bos_token_id"
+        static let padTokenId = "pad_token_id"
+        static let eosTokenId = "eos_token_id"
+        static let sepTokenId = "sep_token_id"
+        static let decoderStartTokenId = "decoder_start_token_id"
+        static let nameOrPath = "name_or_path"
+        static let commitHash = "_commit_hash"
+        static let attnImplementation = "attn_implementation"
+        static let transformersVersion = "transformers_version"
+        static let maxLength = "max_length"
+        static let minLength = "min_length"
+        static let doSample = "do_sample"
+        static let earlyStopping = "early_stopping"
+        static let numBeams = "num_beams"
+        static let temperature = "temperature"
+        static let topK = "top_k"
+        static let topP = "top_p"
+        static let typicalP = "typical_p"
+        static let repetitionPenalty = "repetition_penalty"
+        static let lengthPenalty = "length_penalty"
+        static let noRepeatNgramSize = "no_repeat_ngram_size"
+        static let encoderNoRepeatNgramSize = "encoder_no_repeat_ngram_size"
+        static let badWordsIds = "bad_words_ids"
+        static let numReturnSequences = "num_return_sequences"
+        static let outputScores = "output_scores"
+        static let returnDictInGenerate = "return_dict_in_generate"
+        static let forcedBosTokenId = "forced_bos_token_id"
+        static let forcedEosTokenId = "forced_eos_token_id"
+        static let removeInvalidValues = "remove_invalid_values"
+        static let exponentialDecayLengthPenalty = "exponential_decay_length_penalty"
+        static let suppressTokens = "suppress_tokens"
+        static let beginSuppressTokens = "begin_suppress_tokens"
+        static let numBeamGroups = "num_beam_groups"
+        static let diversityPenalty = "diversity_penalty"
+        static let ropeParameters = "rope_parameters"
+        static let numLabels = "num_labels"
     }
 }

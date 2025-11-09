@@ -39,23 +39,6 @@ extension PreTrainedConfig {
         }
     }
 
-    private static func cachedFile(
-        _ pretrainedModelNameOrPath: String,
-        fileName: String,
-        cacheDir _: String?,
-        forceDownload _: Bool,
-        localFilesOnly _: Bool,
-        token _: String?,
-        userAgent _: [String: Any]?,
-        revision: String,
-        subFolder _: String? = nil,
-        commitHash _: String? = nil
-    ) async throws -> String? {
-        let downloadedRepoDir = await try HubApi.shared.snapshot(from: pretrainedModelNameOrPath, revision: revision, matching: [fileName])
-        let filePath = downloadedRepoDir.appendingPathComponent(fileName)
-        return FileManager.default.fileExists(atPath: filePath.path) ? filePath.path : nil
-    }
-
     private static func parseConfigurationFile(
         _ pretrainedModelNameOrPath: String,
         configurationFileName: String? = nil,
@@ -63,27 +46,22 @@ extension PreTrainedConfig {
     )
         async throws -> Config?
     {
-        enum Constants {
-            static let defaultConfigFile = "config.json"
-            static let defaultRevision = "main"
-        }
-
-        let cacheDir = modelArguments["cache_dir"] as? String
-        let forceDownload = modelArguments["force_download"] as? Bool ?? false
-        let proxies = modelArguments["proxies"] as? [String: String]
-        let token = modelArguments["token"] as? String
-        let localFilesOnly = modelArguments["local_files_only"] as? Bool ?? false
-        let revision = modelArguments["revision"] as? String ?? Constants.defaultRevision
-        let subFolder = modelArguments["subfolder"] as? String
-        let fromPipeline = modelArguments["_from_pipeline"] as? Bool
-        let fromAutoClass = modelArguments["_from_auto"] as? Bool
-        let ggufFile = modelArguments["gguf_file"] as? String
+        let cacheDir = modelArguments[Constants.cacheDir] as? String
+        let forceDownload = modelArguments[Constants.forceDownload] as? Bool ?? false
+        let proxies = modelArguments[Constants.proxies] as? [String: String]
+        let token = modelArguments[Constants.token] as? String
+        let localFilesOnly = modelArguments[Constants.localFilesOnly] as? Bool ?? false
+        let revision = modelArguments[Constants.revision] as? String ?? Constants.defaultRevision
+        let subFolder = modelArguments[Constants.subfolder] as? String
+        let fromPipeline = modelArguments[Constants.fromPipeline] as? Bool
+        let fromAutoClass = modelArguments[Constants.fromAuto] as? Bool
+        let ggufFile = modelArguments[Constants.ggufFile] as? String
 
         var userAgent: [String: Any] = [:]
-        userAgent["file_type"] = "config"
-        userAgent["from_auto_class"] = fromAutoClass ?? false
+        userAgent[Constants.fileType] = "config"
+        userAgent[Constants.fromAutoClass] = fromAutoClass ?? false
         if let fromPipeline = fromPipeline {
-            userAgent["using_pipeline"] = fromPipeline
+            userAgent[Constants.usingPipeline] = fromPipeline
         }
 
         // Check if pretrainedModelNameOrPath is a local directory
@@ -105,17 +83,11 @@ extension PreTrainedConfig {
             configurationFile = ggufFile != nil ? ggufFile : pretrainedModelNameOrPath
             resolvedConfigFile = try await downloadUrl(pretrainedModelNameOrPath)
         } else {
-            configurationFile = ggufFile != nil ? ggufFile : (modelArguments["_configuration_file"] as? String ?? Constants.defaultConfigFile)
-            resolvedConfigFile = await try cachedFile(
-                pretrainedModelNameOrPath,
-                fileName: configurationFile!,
-                cacheDir: cacheDir,
-                forceDownload: forceDownload,
-                localFilesOnly: localFilesOnly,
-                token: token,
-                userAgent: userAgent,
-                revision: revision
-            )
+            configurationFile = ggufFile != nil ? ggufFile : (configurationFile != nil ? configurationFile! : Constants.defaultConfigFile)
+            guard let configurationFile else { return nil }
+            let downloadedRepoDir = await try HubApi.shared.snapshot(from: pretrainedModelNameOrPath, revision: revision, matching: [configurationFile])
+            let filePath = downloadedRepoDir.appendingPathComponent(configurationFile)
+            resolvedConfigFile = FileManager.default.fileExists(atPath: filePath.path) ? filePath.path : nil
         }
 
         if let ggufFile {
@@ -131,21 +103,15 @@ extension PreTrainedConfig {
         let configDict = try HubApi.shared.configuration(fileURL: resolvedConfigFileUrl)
 
         if isLocal {
-            ModelUtils.log("Loading configuration file \(resolvedConfigFile)")
+            ModelUtils.log("Did load configuration file \(resolvedConfigFile)")
         } else {
-            ModelUtils.log("Loading configuration file \(configurationFile) from cache at \(resolvedConfigFile)")
+            ModelUtils.log("Did load configuration file \(configurationFile) from cache at \(resolvedConfigFile)")
         }
 
         return configDict
     }
 
     static func getConfigurationFile(_ files: [String]) -> String? {
-        enum Constants {
-            static let defaultConfigFile = "config.json"
-            static let configPrefix = "config."
-            static let configSuffix = ".json"
-        }
-
         var configurationFilesMap: [String: String] = [:]
 
         for fileName in files {
@@ -182,7 +148,7 @@ extension PreTrainedConfig {
                 .map { $0.0 }
 
         // Defaults to the standard if can't parse version numbers properly
-        var configurationFile = "config.json"
+        var configurationFile = Constants.defaultConfigFile
 
         // Get transformers version
         if let transformersVersion = try? Version(ModelUtils.version) {
@@ -229,4 +195,29 @@ extension PreTrainedConfig {
 
         return configDict
     }
+}
+
+extension PreTrainedConfig.Constants {
+    static let defaultConfigFile = "config.json"
+    static let defaultRevision = "main"
+
+    static let configPrefix = "config."
+    static let configSuffix = ".json"
+
+    // Model argument keys
+    static let cacheDir = "cache_dir"
+    static let forceDownload = "force_download"
+    static let proxies = "proxies"
+    static let token = "token"
+    static let localFilesOnly = "local_files_only"
+    static let revision = "revision"
+    static let subfolder = "subfolder"
+    static let fromPipeline = "_from_pipeline"
+    static let fromAuto = "_from_auto"
+    static let ggufFile = "gguf_file"
+
+    // User agent keys
+    static let fileType = "file_type"
+    static let fromAutoClass = "from_auto_class"
+    static let usingPipeline = "using_pipeline"
 }

@@ -1,4 +1,5 @@
 import Foundation
+import Hub
 
 /// RoPE type variants supported by the framework.
 enum RopeType: String, Codable, CaseIterable {
@@ -106,6 +107,20 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
         self.longFactor = longFactor
         self.lowFreqFactor = lowFreqFactor
         self.highFreqFactor = highFreqFactor
+    }
+
+    init(fromConfig config: Config) {
+        ropeTheta = config["rope_theta", Double.self] ?? 0.0
+        ropeType = .init(rawValue: config["rope_type", String.self] ?? "default") ?? .default
+        factor = config["factor", Double.self]
+        originalMaxPositionEmbeddings = config["original_max_position_embeddings", Int.self]
+        attentionFactor = config["attention_factor", Double.self]
+        betaFast = config["beta_fast", Double.self]
+        betaSlow = config["beta_slow", Double.self]
+        shortFactor = config["short_factor", [Double].self]
+        longFactor = config["long_factor", [Double].self]
+        lowFreqFactor = config["low_freq_factor", Double.self]
+        highFreqFactor = config["high_freq_factor", Double.self]
     }
 
     // MARK: - Codable

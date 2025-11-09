@@ -1,25 +1,7 @@
 import Foundation
+import Hub
 
 /// Configuration class to store the configuration of a NanoChatModel.
-///
-/// It is used to instantiate a NanoChat model according to the specified arguments,
-/// defining the model architecture. Instantiating a configuration with the defaults
-/// will yield a similar configuration to that of the karpathy/nanochat-d32.
-///
-/// Configuration objects inherit from `PreTrainedConfig` and can be used to control
-/// the model outputs.
-///
-/// Example usage:
-/// ```swift
-/// // Initializing a NanoChat style configuration
-/// let configuration = NanoChatConfig()
-///
-/// // Initializing a model from the NanoChat style configuration
-/// let model = NanoChatModel(configuration: configuration)
-///
-/// // Accessing the model configuration
-/// let config = model.config
-/// ```
 class NanoChatConfig: PreTrainedConfig {
     /// Keys to ignore during inference when looking at model outputs.
     static let keysToIgnoreAtInference: [String] = ["past_key_values"]
@@ -34,105 +16,43 @@ class NanoChatConfig: PreTrainedConfig {
         "layers.*.mlp.fc2": "rowwise",
     ]
 
-    // MARK: - Instance Properties
-
-    /// Vocabulary size of the NanoChat model.
-    /// Defines the number of different tokens that can be represented by the inputs_ids.
+    var attentionBias: Bool
+    var attentionDropout: Double
+    var hiddenAct: String
+    var hiddenSize: Int
+    var initializerRange: Double
+    var intermediateSize: Int
+    var finalLogitSoftcapping: Double
+    var maxPositionEmbeddings: Int
+    var numAttentionHeads: Int
+    var numHiddenLayers: Int
+    var numKeyValueHeads: Int
+    var rmsNormEps: Double
+    var useCache: Bool
     var vocabSize: Int
 
-    /// Dimension of the hidden representations.
-    var hiddenSize: Int
-
-    /// Dimension of the MLP representations.
-    /// If `nil`, it will be computed based on the model architecture.
-    var intermediateSize: Int?
-
-    /// Number of hidden layers in the Transformer decoder.
-    var numHiddenLayers: Int
-
-    /// Number of attention heads for each attention layer in the Transformer decoder.
-    var numAttentionHeads: Int
-
-    /// Number of key_value heads for Grouped Query Attention.
-    /// - If `numKeyValueHeads == numAttentionHeads`, uses Multi Head Attention (MHA)
-    /// - If `numKeyValueHeads == 1`, uses Multi Query Attention (MQA)
-    /// - Otherwise uses Grouped Query Attention (GQA)
-    var numKeyValueHeads: Int
-
-    /// The maximum sequence length that this model might ever be used with.
-    var maxPositionEmbeddings: Int
-
-    /// The non-linear activation function in the decoder.
-    var hiddenAct: String
-
-    /// The dropout ratio for the attention probabilities.
-    var attentionDropout: Double
-
-    /// The epsilon used by the RMS normalization layers.
-    var rmsNormEps: Double
-
-    /// The standard deviation of the truncated_normal_initializer for initializing all weight matrices.
-    var initializerRange: Double
-
-    /// Configuration parameters for the RoPE embeddings.
-    /// Contains `rope_theta` and optionally parameters for scaling with longer `max_position_embeddings`.
-    var ropeParams: RopeParameters?
-
-    /// Whether or not the model should return the last key/values attentions.
-    /// Only relevant if `config.isDecoder == true`.
-    var useCache: Bool
-
-    /// Scaling factor when applying tanh softcapping on the logits.
-    var finalLogitSoftcapping: Double?
-
-    /// Whether to use a bias in the query, key, and value projection layers during self-attention.
-    var attentionBias: Bool
-
-    // MARK: - Initialization
-
     /// Initialize a NanoChatConfig with the specified parameters.
-    ///
-    /// - Parameters:
-    ///   - vocabSize: Vocabulary size of the model (default: 50304).
-    ///   - hiddenSize: Dimension of hidden representations (default: 768).
-    ///   - intermediateSize: Dimension of MLP representations (default: 8192).
-    ///   - numHiddenLayers: Number of hidden layers (default: 12).
-    ///   - numAttentionHeads: Number of attention heads (default: 6).
-    ///   - numKeyValueHeads: Number of key-value heads (default: same as numAttentionHeads).
-    ///   - maxPositionEmbeddings: Maximum sequence length (default: 2048).
-    ///   - hiddenAct: Activation function (default: "relu2").
-    ///   - attentionDropout: Attention dropout ratio (default: 0.0).
-    ///   - rmsNormEps: RMS norm epsilon (default: 1e-6).
-    ///   - initializerRange: Weight initialization std dev (default: 0.02).
-    ///   - ropeParams: RoPE embedding parameters (optional).
-    ///   - useCache: Whether to cache key/values (default: true).
-    ///   - finalLogitSoftcapping: Logit softcapping scaling factor (default: 15.0).
-    ///   - attentionBias: Whether to use bias in attention projections (default: false).
-    ///   - bosTokenId: Beginning of stream token ID (default: 0).
-    ///   - eosTokenId: End of stream token ID (default: 1).
-    ///   - padTokenId: Padding token ID (default: 1).
-    ///   - tieWordEmbeddings: Whether to tie word embeddings (default: false).
-    ///   - additionalParams: Additional configuration parameters.
     init(
-        vocabSize: Int = 50304,
-        hiddenSize: Int = 768,
-        intermediateSize: Int? = 8192,
-        numHiddenLayers: Int = 12,
-        numAttentionHeads: Int = 6,
-        numKeyValueHeads: Int? = nil,
-        maxPositionEmbeddings: Int = 2048,
-        hiddenAct: String = "relu2",
-        attentionDropout: Double = 0.0,
-        rmsNormEps: Double = 1e-6,
-        initializerRange: Double = 0.02,
-        ropeParams: RopeParameters? = nil,
-        useCache: Bool = true,
-        finalLogitSoftcapping: Double? = 15.0,
-        attentionBias: Bool = false,
-        bosTokenId: Int = 0,
-        eosTokenId: Int = 1,
-        padTokenId: Int = 1,
-        tieWordEmbeddings: Bool = false,
+        attentionBias: Bool = Constants.attentionBias,
+        attentionDropout: Double = Constants.attentionDropout,
+        bosTokenId: Int = Constants.bosTokenId,
+        dtype: String = Constants.dtype,
+        eosTokenId: Int = Constants.eosTokenId,
+        hiddenAct: String = Constants.hiddenAct,
+        hiddenSize: Int = Constants.hiddenSize,
+        initializerRange: Double = Constants.initializerRange,
+        intermediateSize: Int = Constants.intermediateSize,
+        finalLogitSoftcapping: Double = Constants.finalLogitSoftcapping,
+        maxPositionEmbeddings: Int = Constants.maxPositionEmbeddings,
+        numAttentionHeads: Int = Constants.numAttentionHeads,
+        numHiddenLayers: Int = Constants.numHiddenLayers,
+        numKeyValueHeads: Int = Constants.numKeyValueHeads,
+        padTokenId: Int = Constants.padTokenId,
+        rmsNormEps: Double = Constants.rmsNormEps,
+        ropeParameters: RopeParameters = RopeParameters.default(ropeTheta: Constants.ropeTheta),
+        tieWordEmbeddings: Bool = Constants.tieWordEmbeddings,
+        useCache: Bool = Constants.useCache,
+        vocabSize: Int = Constants.vocabSize,
         additionalParams: [String: Any] = [:]
     ) {
         // Initialize model-specific properties
@@ -153,54 +73,61 @@ class NanoChatConfig: PreTrainedConfig {
         self.useCache = useCache
         self.finalLogitSoftcapping = finalLogitSoftcapping
         self.attentionBias = attentionBias
-        self.ropeParams = ropeParams
 
         // Initialize base class
         super.init(
-            outputHiddenStates: false,
-            outputAttentions: false,
-            returnDict: true,
-            dtype: nil,
+            dtype: dtype,
             tieWordEmbeddings: tieWordEmbeddings,
-            chunkSizeFeedForward: 0,
-            isEncoderDecoder: false,
-            isDecoder: false,
-            crossAttentionHiddenSize: nil,
-            addCrossAttention: false,
-            tieEncoderDecoder: false,
-            architectures: nil,
-            finetuningTask: nil,
-            id2label: nil,
-            label2id: nil,
-            numLabels: nil,
-            taskSpecificParams: nil,
-            problemType: nil,
-            tokenizerClass: nil,
-            prefix: nil,
             bosTokenId: bosTokenId,
             padTokenId: padTokenId,
             eosTokenId: eosTokenId,
-            sepTokenId: nil,
-            decoderStartTokenId: nil,
-            nameOrPath: "",
+            ropeParameters: ropeParameters,
             additionalParams: additionalParams
         )
+
+        modelType = "nanochat"
+
+        // Validate and standardize RoPE parameters
+        validateAndStandardizeRopeParameters()
+    }
+
+    /// Initialize from parsed configuration class
+    override init(fromConfig config: Config) {
+        // Parse NanoChat-specific configuration values
+        attentionBias = config[ConfigKeys.attentionBias, Bool.self] ?? Constants.attentionBias
+        attentionDropout = config[ConfigKeys.attentionDropout, Double.self] ?? Constants.attentionDropout
+        hiddenAct = config[ConfigKeys.hiddenAct, String.self] ?? Constants.hiddenAct
+        hiddenSize = config[ConfigKeys.hiddenSize, Int.self] ?? Constants.hiddenSize
+        initializerRange = config[ConfigKeys.initializerRange, Double.self] ?? Constants.initializerRange
+        intermediateSize = config[ConfigKeys.intermediateSize, Int.self] ?? Constants.intermediateSize
+        finalLogitSoftcapping = config[ConfigKeys.logitsSoftCap, Double.self] ?? Constants.finalLogitSoftcapping
+        maxPositionEmbeddings = config[ConfigKeys.maxPositionEmbeddings, Int.self] ?? Constants.maxPositionEmbeddings
+        numAttentionHeads = config[ConfigKeys.numAttentionHeads, Int.self] ?? Constants.numAttentionHeads
+        numHiddenLayers = config[ConfigKeys.numHiddenLayers, Int.self] ?? Constants.numHiddenLayers
+        numKeyValueHeads = config[ConfigKeys.numKeyValueHeads, Int.self] ?? config[ConfigKeys.numAttentionHeads, Int.self] ?? Constants.numKeyValueHeads
+        rmsNormEps = config[ConfigKeys.rmsNormEps, Double.self] ?? Constants.rmsNormEps
+        useCache = config[ConfigKeys.useCache, Bool.self] ?? Constants.useCache
+        vocabSize = config[ConfigKeys.vocabSize, Int.self] ?? Constants.vocabSize
+
+        // Call super.init to initialize base class properties
+        super.init(fromConfig: config)
+
+        // Set model type
+        modelType = "nanochat"
 
         // Validate and standardize RoPE parameters
         validateAndStandardizeRopeParameters()
     }
 
     /// Validates and standardizes the RoPE parameters.
-    ///
-    /// This ensures the RoPE configuration is correct and sets up default values if needed.
     private func validateAndStandardizeRopeParameters() {
         // If no rope_parameters provided, create default with rope_theta
-        if ropeParams == nil {
-            ropeParams = RopeParameters.default(ropeTheta: 10000.0)
+        if ropeParameters == nil {
+            ropeParameters = RopeParameters.default(ropeTheta: Constants.ropeTheta)
         }
 
         // Validate the RoPE parameters
-        if let ropeParameters = ropeParams {
+        if let ropeParameters {
             do {
                 try ropeParameters.validate()
             } catch {
@@ -208,61 +135,53 @@ class NanoChatConfig: PreTrainedConfig {
             }
         }
     }
-}
 
-// MARK: - Convenience Extensions
+    /// Default values for NanoChat configuration parameters
+    enum Constants {
+        // Model architecture
+        static let attentionBias = false
+        static let attentionDropout = 0.0
+        static let hiddenAct = "relu2"
+        static let hiddenSize = 2048
+        static let initializerRange = 0.02
+        static let intermediateSize = 8192
+        static let finalLogitSoftcapping = 15.0
+        static let maxPositionEmbeddings = 2048
+        static let numAttentionHeads = 16
+        static let numHiddenLayers = 32
+        static let numKeyValueHeads = 16
+        static let rmsNormEps = 1e-6
+        static let useCache = true
+        static let vocabSize = 65536
 
-extension NanoChatConfig {
-    /// Creates a NanoChatConfig from a dictionary.
-    ///
-    /// - Parameter dictionary: Dictionary containing configuration values.
-    /// - Returns: A NanoChatConfig instance.
-    static func fromDictionary(_ dictionary: [String: Any]) -> NanoChatConfig? {
-        let vocabSize = dictionary["vocab_size"] as? Int ?? 50304
-        let hiddenSize = dictionary["hidden_size"] as? Int ?? 768
-        let intermediateSize = dictionary["intermediate_size"] as? Int
-        let numHiddenLayers = dictionary["num_hidden_layers"] as? Int ?? 12
-        let numAttentionHeads = dictionary["num_attention_heads"] as? Int ?? 6
-        let numKeyValueHeads = dictionary["num_key_value_heads"] as? Int
-        let maxPositionEmbeddings = dictionary["max_position_embeddings"] as? Int ?? 2048
-        let hiddenAct = dictionary["hidden_act"] as? String ?? "relu2"
-        let attentionDropout = dictionary["attention_dropout"] as? Double ?? 0.0
-        let rmsNormEps = dictionary["rms_norm_eps"] as? Double ?? 1e-6
-        let initializerRange = dictionary["initializer_range"] as? Double ?? 0.02
-        let useCache = dictionary["use_cache"] as? Bool ?? true
-        let finalLogitSoftcapping = dictionary["final_logit_softcapping"] as? Double
-        let attentionBias = dictionary["attention_bias"] as? Bool ?? false
-        let bosTokenId = dictionary["bos_token_id"] as? Int ?? 0
-        let eosTokenId = dictionary["eos_token_id"] as? Int ?? 1
-        let padTokenId = dictionary["pad_token_id"] as? Int ?? 1
-        let tieWordEmbeddings = dictionary["tie_word_embeddings"] as? Bool ?? false
+        // Token IDs
+        static let bosTokenId = 65527
+        static let eosTokenId = 65531
+        static let padTokenId = 65531
 
-        // Handle rope_parameters
-        var ropeParams: RopeParameters?
-        if let ropeDict = dictionary["rope_parameters"] as? [String: Any] {
-            ropeParams = RopeParameters.fromDictionary(ropeDict)
-        }
+        // Model settings
+        static let dtype = "bfloat16"
+        static let tieWordEmbeddings = false
 
-        return NanoChatConfig(
-            vocabSize: vocabSize,
-            hiddenSize: hiddenSize,
-            intermediateSize: intermediateSize,
-            numHiddenLayers: numHiddenLayers,
-            numAttentionHeads: numAttentionHeads,
-            numKeyValueHeads: numKeyValueHeads,
-            maxPositionEmbeddings: maxPositionEmbeddings,
-            hiddenAct: hiddenAct,
-            attentionDropout: attentionDropout,
-            rmsNormEps: rmsNormEps,
-            initializerRange: initializerRange,
-            ropeParams: ropeParams,
-            useCache: useCache,
-            finalLogitSoftcapping: finalLogitSoftcapping,
-            attentionBias: attentionBias,
-            bosTokenId: bosTokenId,
-            eosTokenId: eosTokenId,
-            padTokenId: padTokenId,
-            tieWordEmbeddings: tieWordEmbeddings
-        )
+        // RoPE settings
+        static let ropeTheta = 10000.0
+    }
+
+    /// Config key names (snake_case strings used in configuration files)
+    enum ConfigKeys {
+        static let attentionBias = "attention_bias"
+        static let attentionDropout = "attention_dropout"
+        static let hiddenAct = "hidden_act"
+        static let hiddenSize = "hidden_size"
+        static let initializerRange = "initializer_range"
+        static let intermediateSize = "intermediate_size"
+        static let logitsSoftCap = "logits_soft_cap"
+        static let maxPositionEmbeddings = "max_position_embeddings"
+        static let numAttentionHeads = "num_attention_heads"
+        static let numHiddenLayers = "num_hidden_layers"
+        static let numKeyValueHeads = "num_key_value_heads"
+        static let rmsNormEps = "rms_norm_eps"
+        static let useCache = "use_cache"
+        static let vocabSize = "vocab_size"
     }
 }
