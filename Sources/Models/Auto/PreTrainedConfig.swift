@@ -255,7 +255,7 @@ class PreTrainedConfig {
         attributeMap = config[ConfigKeys.attributeMap, [String: String].self] ?? [:]
         returnDict = config[ConfigKeys.returnDict, Bool.self] ?? Constants.returnDict
         outputHiddenStates = config[ConfigKeys.outputHiddenStates, Bool.self] ?? Constants.outputHiddenStates
-        dtype = ModelUtils.dtype(config[ConfigKeys.torchDtype, String.self])
+        dtype = ModelUtils.dtype(config[ConfigKeys.dtype, String.self])
         _outputAttentions = config[ConfigKeys.outputAttentions, Bool.self] ?? Constants.outputAttentions
         tieWordEmbeddings = config[ConfigKeys.tieWordEmbeddings, Bool.self] ?? Constants.tieWordEmbeddings
         chunkSizeFeedForward = config[ConfigKeys.chunkSizeFeedForward, Int.self] ?? Constants.chunkSizeFeedForward
@@ -396,7 +396,7 @@ class PreTrainedConfig {
         static let attributeMap = "attribute_map"
         static let returnDict = "return_dict"
         static let outputHiddenStates = "output_hidden_states"
-        static let torchDtype = "torch_dtype"
+        static let dtype = "dtype"
         static let outputAttentions = "output_attentions"
         static let tieWordEmbeddings = "tie_word_embeddings"
         static let chunkSizeFeedForward = "chunk_size_feed_forward"

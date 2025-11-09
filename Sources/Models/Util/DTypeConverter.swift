@@ -6,40 +6,42 @@ extension ModelUtils {
     static func dtype(_ dtypeStr: String?) -> DType? {
         guard let dtypeStr else { return nil }
 
-        switch dtypeStr {
-        case "DoubleStorage":
+        switch dtypeStr.lowercased() {
+        case "doublestorage", "double", "float64":
             return .float64
-        case "FloatStorage":
+        case "floatstorage", "float", "float32":
             return .float32
-        case "HalfStorage":
+        case "halfstorage", "float16", "half":
             return .float16
-        case "LongStorage":
+        case "longstorage", "int64", "long":
             return .int64
-        case "IntStorage":
+        case "uint64":
+            return .uint64
+        case "intstorage", "int", "int32":
             return .int32
-        case "ShortStorage":
+        case "shortstorage", "int16", "short":
             return .int16
-        case "CharStorage":
+        case "charstorage", "int8":
             return .int8
-        case "ByteStorage":
+        case "bytestorage", "uint8":
             return .uint8
-        case "BoolStorage":
+        case "boolstorage", "bool":
             return .bool
-        case "BFloat16Storage":
+        case "bfloat16storage", "bfloat16":
             return .bfloat16
-        case "ComplexDoubleStorage":
+        case "complexdoublestorage", "complex128":
             return nil
-        case "CompleteFloatStorage":
+        case "completefloatstorage", "complex64":
             return .complex64
-        case "QUInt8Storage":
+        case "quint8storage":
             return .uint8
-        case "QInt8Storage":
+        case "qint8storage":
             return .int8
-        case "QInt32Storage":
+        case "qint32storage":
             return .int32
-        case "QUInt4x2Storage":
+        case "quint4x2storage":
             return .uint8
-        case "QUInt2x4Storage":
+        case "quint2x4storage":
             return .uint8
         default:
             return nil

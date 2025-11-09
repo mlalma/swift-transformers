@@ -46,11 +46,11 @@ extension PreTrainedConfig {
     )
         async throws -> Config?
     {
-        let cacheDir = modelArguments[Constants.cacheDir] as? String
-        let forceDownload = modelArguments[Constants.forceDownload] as? Bool ?? false
-        let proxies = modelArguments[Constants.proxies] as? [String: String]
-        let token = modelArguments[Constants.token] as? String
-        let localFilesOnly = modelArguments[Constants.localFilesOnly] as? Bool ?? false
+        // let cacheDir = modelArguments[Constants.cacheDir] as? String
+        // let forceDownload = modelArguments[Constants.forceDownload] as? Bool ?? false
+        // let proxies = modelArguments[Constants.proxies] as? [String: String]
+        // let token = modelArguments[Constants.token] as? String
+        // let localFilesOnly = modelArguments[Constants.localFilesOnly] as? Bool ?? false
         let revision = modelArguments[Constants.revision] as? String ?? Constants.defaultRevision
         let subFolder = modelArguments[Constants.subfolder] as? String
         let fromPipeline = modelArguments[Constants.fromPipeline] as? Bool
@@ -85,27 +85,28 @@ extension PreTrainedConfig {
         } else {
             configurationFile = ggufFile != nil ? ggufFile : (configurationFile != nil ? configurationFile! : Constants.defaultConfigFile)
             guard let configurationFile else { return nil }
-            let downloadedRepoDir = await try HubApi.shared.snapshot(from: pretrainedModelNameOrPath, revision: revision, matching: [configurationFile])
+            let downloadedRepoDir = try await HubApi.shared.snapshot(from: pretrainedModelNameOrPath, revision: revision, matching: [configurationFile])
             let filePath = downloadedRepoDir.appendingPathComponent(configurationFile)
             resolvedConfigFile = FileManager.default.fileExists(atPath: filePath.path) ? filePath.path : nil
         }
 
-        if let ggufFile {
+        if ggufFile != nil {
             ModelUtils.log("GGUF configuration loading is not right now supported!!")
             return nil
         }
 
-        guard let resolvedConfigFile, let resolvedConfigFileUrl = URL(string: resolvedConfigFile) else {
+        guard let resolvedConfigFile else {
             ModelUtils.log("Couldn't load the configuration file.")
             return nil
         }
 
+        let resolvedConfigFileUrl = URL(fileURLWithPath: resolvedConfigFile)
         let configDict = try HubApi.shared.configuration(fileURL: resolvedConfigFileUrl)
 
         if isLocal {
             ModelUtils.log("Did load configuration file \(resolvedConfigFile)")
         } else {
-            ModelUtils.log("Did load configuration file \(configurationFile) from cache at \(resolvedConfigFile)")
+            ModelUtils.log("Did load configuration file \(configurationFile ?? "NO_FILE") from cache at \(resolvedConfigFile)")
         }
 
         return configDict
@@ -132,14 +133,14 @@ extension PreTrainedConfig {
         }
 
         // Perform semantic sort
-        var availableVersions =
+        let availableVersions =
             configurationFilesMap
                 .keys
-                .map { ($0, try? Version($0)) }
+                .map { ($0, Version($0)) }
                 .sorted {
                     if let leftVersion = $0.1, let rightVersion = $1.1 {
                         return leftVersion < rightVersion
-                    } else if let leftVersion = $0.1 {
+                    } else if let _ = $0.1 {
                         return true
                     } else {
                         return false
@@ -151,9 +152,9 @@ extension PreTrainedConfig {
         var configurationFile = Constants.defaultConfigFile
 
         // Get transformers version
-        if let transformersVersion = try? Version(ModelUtils.version) {
+        if let transformersVersion = Version(ModelUtils.version) {
             for version in availableVersions {
-                if let configVersion = try? Version(version) {
+                if let configVersion = Version(version) {
                     if configVersion <= transformersVersion,
                        let versionConfigFile = configurationFilesMap[version]
                     {
@@ -170,10 +171,6 @@ extension PreTrainedConfig {
     }
 
     static func getConfigDict(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) async -> Config? {
-        enum Constants {
-            static let configurationFiles = "configuration_files"
-        }
-
         var configDict: Config?
 
         do {
@@ -206,15 +203,16 @@ extension PreTrainedConfig.Constants {
 
     // Model argument keys
     static let cacheDir = "cache_dir"
+    static let configurationFiles = "configuration_files"
     static let forceDownload = "force_download"
+    static let fromAuto = "_from_auto"
+    static let fromPipeline = "_from_pipeline"
+    static let ggufFile = "gguf_file"
+    static let localFilesOnly = "local_files_only"
     static let proxies = "proxies"
     static let token = "token"
-    static let localFilesOnly = "local_files_only"
     static let revision = "revision"
     static let subfolder = "subfolder"
-    static let fromPipeline = "_from_pipeline"
-    static let fromAuto = "_from_auto"
-    static let ggufFile = "gguf_file"
 
     // User agent keys
     static let fileType = "file_type"

@@ -26,7 +26,7 @@ extension Config {
         } else if output == Bool.self {
             return value.boolean() as? T
         } else if output == Double.self {
-            return value.floating() as? T
+            return value.floating() != nil ? Double(value.floating()!) as? T : nil
         } else if output == Float.self {
             return value.floating() as? T
         } else if output == Config.self {
@@ -36,7 +36,7 @@ extension Config {
         } else if output == [Int].self {
             return value.array()?.compactMap { $0.integer() } as? T
         } else if output == [Double].self {
-            return value.array()?.compactMap { $0.floating() as? Double } as? T
+            return value.array()?.compactMap { value.floating() != nil ? Double($0.floating()!) as? T : nil } as? T
         } else if output == [Float].self {
             return value.array()?.compactMap { $0.floating() } as? T
         } else if output == [Config].self {
