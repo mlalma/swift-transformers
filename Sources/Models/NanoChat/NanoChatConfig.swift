@@ -46,7 +46,7 @@ class NanoChatConfig: PreTrainedConfig {
         maxPositionEmbeddings: Int = Constants.maxPositionEmbeddings,
         numAttentionHeads: Int = Constants.numAttentionHeads,
         numHiddenLayers: Int = Constants.numHiddenLayers,
-        numKeyValueHeads: Int = Constants.numKeyValueHeads,
+        numKeyValueHeads: Int? = Constants.numKeyValueHeads,
         padTokenId: Int = Constants.padTokenId,
         rmsNormEps: Double = Constants.rmsNormEps,
         ropeParameters: RopeParameters = RopeParameters.default(ropeTheta: Constants.ropeTheta),
