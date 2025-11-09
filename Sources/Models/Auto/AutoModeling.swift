@@ -6,12 +6,12 @@ import Foundation
 // 4. Post processing
 
 public class AutoModelForCausalLM: BaseAutoModelClass {
-  override private init() {
-    super.init()
-  }
-  
-  static public func fromPretrained(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) {
-    let model = AutoModelForCausalLM()
-    model.fromPretrained(pretrainedModelNameOrPath, modelArguments: modelArguments)
-  }
+    override private init() {
+        super.init()
+    }
+
+    public static func fromPretrained(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) {
+        let model = AutoModelForCausalLM()
+        model.fromPretrained(pretrainedModelNameOrPath, modelArguments: modelArguments)
+    }
 }

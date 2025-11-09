@@ -1,5 +1,5 @@
 import Foundation
 
-enum AutoModelError : Error {
-  case invalidConfig
+enum AutoModelError: Error {
+    case invalidConfig
 }

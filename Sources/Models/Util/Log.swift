@@ -1,18 +1,18 @@
 import Foundation
 
-extension ModelUtils {
-#if DEBUG
+public extension ModelUtils {
+    #if DEBUG
 
-/// Lightweight wrapper around Swift's `print()` function that only executes in DEBUG builds.
-/// - Parameter s: The string to print to the console
-@inline(__always) static public func log(_ s: String) {
-  print(s)
-}
+        /// Lightweight wrapper around Swift's `print()` function that only executes in DEBUG builds.
+        /// - Parameter s: The string to print to the console
+        @inline(__always) static func log(_ s: String) {
+            print(s)
+        }
 
-#else
+    #else
 
-/// No-op in RELEASE builds
-@inline(__always) static public func log(_ s: String) {}
+        /// No-op in RELEASE builds
+        @inline(__always) static func log(_: String) {}
 
-#endif
+    #endif
 }
