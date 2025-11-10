@@ -1,6 +1,15 @@
 import Foundation
 
 extension PreTrainedModel {
+    private static func addVariant(weightsName: String, variant: String?) -> String {
+        if let variant {
+            var weightParts = weightsName.split(separator: ".").map(String.init)
+            weightParts.insert(variant, at: weightParts.count - 1)
+            return weightParts.joined(separator: ".")
+        }
+        return weightsName
+    }
+    
     private static func getResolvedCheckpointFiles(
         _ pretrainedModelNameOrPath: String,
         variant: String? = nil,
@@ -9,8 +18,86 @@ extension PreTrainedModel {
         downloadArguments: DownloadArguments?,
         userAgent: [String: Any],
         transformersExplicitFilename: String? = nil
-    ) {
+    ) async throws -> ([String]?, [String: Any]?) {
+        let subFolder = downloadArguments?.subFolder ?? ""
+        
+        if let transformersExplicitFilename {
+            if transformersExplicitFilename.hasSuffix(".safetensors") || transformersExplicitFilename.hasSuffix(".safetensors.index.json") {
+                ModelUtils.log("The transformers file in the config seems to be incorrect: it is neither a safetensors file " +
+                               "(*.safetensors) nor a safetensors index file (*.safetensors.index.json): \(transformersExplicitFilename)")
+            }
+            return (nil, nil)
+        }
+        
+        var archiveFile: URL?
+        var resolvedArchiveFile: URL?
+        var isSharded: Bool?
+        
+        guard ggutFile == nil else {
+            ModelUtils.log("GGUF files are not yet supported")
+            return (nil, nil)
+        }
+
+        let pretrainedModelNameOrPathType = ModelUtils.isLocalURL(pretrainedModelNameOrPath)
+        if pretrainedModelNameOrPathType == .directory {
+            if let transformersExplicitFilename {
+                archiveFile = URL(filePath: pretrainedModelNameOrPath)
+                    .appending(path: subFolder)
+                    .appending(component: transformersExplicitFilename)
+                isSharded = transformersExplicitFilename.hasSuffix(".safetensors.index.json")
+            } else if let useSafetensors, useSafetensors {
+                let fileManager = FileManager.default
+                let weights = [
+                    ("model.safetensors", false) ,
+                    ("model.safetensors.index.json", true),
+                ]
+                
+                for (fileName, weightsAreSharded) in weights {
+                    var filePath = URL(filePath: pretrainedModelNameOrPath)
+                        .appending(path: subFolder)
+                        .appending(component: addVariant(weightsName: fileName, variant: variant))
+                    if fileManager.fileExists(atPath: filePath.path()) {
+                        archiveFile = filePath
+                        isSharded = weightsAreSharded
+                        break
+                    }
+                }
+                
+                if archiveFile == nil {
+                    ModelUtils.log("Error - could not find a safetensor model file in the given path: \(pretrainedModelNameOrPath)")
+                    return (nil, nil)
+                }
+            } else {
+                let fileManager = FileManager.default
+                let weights = [
+                    ("pytorch_model.bin", false),
+                    ("pytorch_model.bin.index.json", true)
+                ]
+                
+                for (fileName, weightsAreSharded) in weights {
+                    var filePath = URL(filePath: pretrainedModelNameOrPath)
+                        .appending(path: subFolder)
+                        .appending(component: addVariant(weightsName: fileName, variant: variant))
+                    if fileManager.fileExists(atPath: filePath.path()) {
+                        archiveFile = filePath
+                        isSharded = weightsAreSharded
+                        break
+                    }
+                }
+                
+                if archiveFile == nil {
+                    ModelUtils.log("Error - could not find a pytorch model file in the given path: \(pretrainedModelNameOrPath)")
+                    return (nil, nil)
+                }
+            }
+        } else if pretrainedModelNameOrPathType == .file {
+            archiveFile = URL(filePath: pretrainedModelNameOrPath)
+        } else if ModelUtils.isRemoteURL(pretrainedModelNameOrPath) {
+            resolvedArchiveFile = URL(fileURLWithPath: try await ModelUtils.downloadUrl(pretrainedModelNameOrPath))
+        }
+        
         // TO_DO: Load model files here
+        return (nil, nil)
     }
 
     static func fromPretrained(
