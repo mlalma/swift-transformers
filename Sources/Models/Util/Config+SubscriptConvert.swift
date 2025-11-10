@@ -5,7 +5,7 @@ extension Config {
     /// Subscript accessor for dictionary values using String keys with type inference.
     /// - Parameters:
     ///   - key: The string key to look up in the dictionary
-    ///   - output: The expected output type (e.g., String.self, Int.self, etc.)
+    ///   - output: The expected output type (e.g., String.self, Int.self)
     /// - Returns: The value associated with the key in the requested type, or nil if not found or conversion fails.
     subscript<T>(key: String, _ output: T.Type) -> T? {
         // Check if the Config contains a dictionary
@@ -18,7 +18,6 @@ extension Config {
             return nil
         }
 
-        // Handle different output types
         if output == String.self {
             return value.string() as? T
         } else if output == Int.self {
@@ -80,7 +79,6 @@ extension Config {
 
 extension Config {
     /// Converts a Config value to Any type.
-    ///
     /// - Returns: The appropriate Swift type (String, Int, Bool, Double, Array, Dictionary) or nil
     func toAny() -> Any? {
         if let stringValue = string() {

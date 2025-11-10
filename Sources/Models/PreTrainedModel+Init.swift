@@ -1,6 +1,42 @@
 import Foundation
+import Hub
 
 extension PreTrainedModel {
+    private static func cachedFile(_ pathOrRepoId: String, fileNames: [String], downloadArguments: DownloadArguments?) async throws -> [String]? {
+        let subFolder = downloadArguments?.subFolder != nil ? downloadArguments!.subFolder : ""
+        let revision = downloadArguments?.revision ?? "main"
+        var cacheDir = downloadArguments?.cacheDir
+    
+        let fullFileNames = subFolder.isEmpty ? fileNames : fileNames.map { subFolder.hasSuffix("/") ? "\(subFolder)\($0)" : "\(subFolder)/\($0)"}
+        
+        var existingFiles: [String] = []
+        for fileName in fullFileNames {
+            if ModelUtils.isLocal(pathOrRepoId) == .directory {
+                let resolvedFile = (pathOrRepoId + "/" + fileName).replacingOccurrences(of: "//", with: "/")
+                if ModelUtils.isLocal(resolvedFile) != .file {
+                    ModelUtils.log("Missing entry \(resolvedFile)")
+                } else {
+                    existingFiles.append(resolvedFile)
+                }
+            }
+        }
+        
+        if ModelUtils.isLocal(pathOrRepoId) == .directory, existingFiles.count > 0 {
+            return existingFiles
+        }
+        
+        let downloadedRepoDir = try await HubApi.shared.snapshot(from: pathOrRepoId, revision: revision, matching: fullFileNames)
+        
+        existingFiles = []
+        for fileName in fullFileNames {
+            let fullFileNamePath = downloadedRepoDir.appendingPathComponent(fileName).path()
+            if ModelUtils.isLocal(fullFileNamePath) == .file {
+                existingFiles.append(fullFileNamePath)
+            }
+        }
+        return existingFiles
+    }
+    
     private static func addVariant(weightsName: String, variant: String?) -> String {
         if let variant {
             var weightParts = weightsName.split(separator: ".").map(String.init)
@@ -18,7 +54,7 @@ extension PreTrainedModel {
         downloadArguments: DownloadArguments?,
         userAgent: [String: Any],
         transformersExplicitFilename: String? = nil
-    ) async throws -> ([String]?, [String: Any]?) {
+    ) async throws -> ([URL]?, [String: Any]?) {
         let subFolder = downloadArguments?.subFolder ?? ""
         
         if let transformersExplicitFilename {
@@ -31,6 +67,7 @@ extension PreTrainedModel {
         
         var archiveFile: URL?
         var resolvedArchiveFile: URL?
+        var fileName: String?
         var isSharded: Bool?
         
         guard ggutFile == nil else {
@@ -38,7 +75,7 @@ extension PreTrainedModel {
             return (nil, nil)
         }
 
-        let pretrainedModelNameOrPathType = ModelUtils.isLocalURL(pretrainedModelNameOrPath)
+        let pretrainedModelNameOrPathType = ModelUtils.isLocal(pretrainedModelNameOrPath)
         if pretrainedModelNameOrPathType == .directory {
             if let transformersExplicitFilename {
                 archiveFile = URL(filePath: pretrainedModelNameOrPath)
@@ -53,7 +90,7 @@ extension PreTrainedModel {
                 ]
                 
                 for (fileName, weightsAreSharded) in weights {
-                    var filePath = URL(filePath: pretrainedModelNameOrPath)
+                    let filePath = URL(filePath: pretrainedModelNameOrPath)
                         .appending(path: subFolder)
                         .appending(component: addVariant(weightsName: fileName, variant: variant))
                     if fileManager.fileExists(atPath: filePath.path()) {
@@ -75,7 +112,7 @@ extension PreTrainedModel {
                 ]
                 
                 for (fileName, weightsAreSharded) in weights {
-                    var filePath = URL(filePath: pretrainedModelNameOrPath)
+                    let filePath = URL(filePath: pretrainedModelNameOrPath)
                         .appending(path: subFolder)
                         .appending(component: addVariant(weightsName: fileName, variant: variant))
                     if fileManager.fileExists(atPath: filePath.path()) {
@@ -92,12 +129,39 @@ extension PreTrainedModel {
             }
         } else if pretrainedModelNameOrPathType == .file {
             archiveFile = URL(filePath: pretrainedModelNameOrPath)
-        } else if ModelUtils.isRemoteURL(pretrainedModelNameOrPath) {
+        } else if ModelUtils.isRemote(pretrainedModelNameOrPath) {
+            fileName = pretrainedModelNameOrPath
             resolvedArchiveFile = URL(fileURLWithPath: try await ModelUtils.downloadUrl(pretrainedModelNameOrPath))
+        } else {
+            if let transformersExplicitFilename {
+                fileName = transformersExplicitFilename
+                isSharded = transformersExplicitFilename.hasPrefix(".safetensors.index.json")
+            } else if let useSafetensors, useSafetensors {
+                fileName = addVariant(weightsName: "model.safetensors", variant: variant)
+            } else {
+                fileName = addVariant(weightsName: "pytorch_model.bin", variant: variant)
+            }
+            
+            if let fileName {
+                if let resolvedFileStr = try await cachedFile(
+                    pretrainedModelNameOrPath,
+                    fileNames: [fileName],
+                    downloadArguments: downloadArguments)?.first {
+                    resolvedArchiveFile = URL(fileURLWithPath: resolvedFileStr)
+                }
+            }
         }
         
-        // TO_DO: Load model files here
-        return (nil, nil)
+        var checkpointFiles: [URL]? = []
+        if let isSharded, isSharded {
+            // TO_DO: Download checkpoint files here
+        } else {
+            if let resolvedArchiveFile {
+                checkpointFiles = [resolvedArchiveFile]
+            }
+        }
+        
+        return (checkpointFiles, nil)
     }
 
     static func fromPretrained(
@@ -105,7 +169,7 @@ extension PreTrainedModel {
         config: PreTrainedConfig,
         useSafetensors: Bool?,
         modelArguments: [String: Any]
-    ) -> PreTrainedModel? {
+    ) async throws -> PreTrainedModel? {
         let stateDict = modelArguments["state_dict"] as? [String: Any]
         let ggufFile = modelArguments["gguf_file"] as? String
         let variant = modelArguments["variant"] as? String
@@ -130,10 +194,10 @@ extension PreTrainedModel {
             "from_auto_class": true
         ]
 
-        if let stateDict {
+        if stateDict != nil {
             ModelUtils.log("State dict containing model weights is explicitly provided")
         } else {
-            getResolvedCheckpointFiles(
+            _ = try await getResolvedCheckpointFiles(
                 pretrainedModelNameOrPath,
                 variant: variant,
                 ggutFile: nil,

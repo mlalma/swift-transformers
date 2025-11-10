@@ -28,13 +28,13 @@ extension PreTrainedConfig {
             userAgent[Constants.usingPipeline] = fromPipeline
         }
 
-        let localDirOrFile = ModelUtils.isLocalURL(pretrainedModelNameOrPath, subFolder)
+        let localDirOrFile = ModelUtils.isLocal(pretrainedModelNameOrPath, subFolder)
 
         var resolvedConfigFile: String?
         var configurationFile = configurationFileName
         if localDirOrFile == .file || localDirOrFile == .directory {
             resolvedConfigFile = pretrainedModelNameOrPath
-        } else if ModelUtils.isRemoteURL(pretrainedModelNameOrPath) {
+        } else if ModelUtils.isRemote(pretrainedModelNameOrPath) {
             configurationFile = ggufFile != nil ? ggufFile : pretrainedModelNameOrPath
             resolvedConfigFile = try await ModelUtils.downloadUrl(pretrainedModelNameOrPath)
         } else {

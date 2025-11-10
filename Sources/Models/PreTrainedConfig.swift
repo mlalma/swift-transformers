@@ -3,7 +3,7 @@ import Hub
 import MLX
 import Version
 
-/// Base class for all model configurations. Handles parameters that are common to most models' configurations.
+/// Base class for all model configurations. Handles parameters that are common in most models.
 class PreTrainedConfig {
     // Model type
     var modelType: String?
