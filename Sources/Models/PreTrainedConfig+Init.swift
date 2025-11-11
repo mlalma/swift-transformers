@@ -131,7 +131,7 @@ extension PreTrainedConfig {
         return configurationFile
     }
 
-    static func getConfigDict(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) async -> Config? {
+    class func getConfigDict(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) async -> Config? {
         var configDict: Config?
 
         do {

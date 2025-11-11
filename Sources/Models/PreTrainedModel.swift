@@ -1,4 +1,4 @@
 import Foundation
 import MLX
 
-class PreTrainedModel {}
+public class PreTrainedModel {}

@@ -12,19 +12,7 @@ extension PreTrainedModel {
         let weightMap: [String: String]?
     }
     
-    private static func loadPreTrainedModel(
-        model: PreTrainedModel,
-        stateDict: [String: Any]?,
-        checkpointFiles: [String]?,
-        pretrainedModelNameOrPath: String?,
-        ignoreMismatchedSizes: Bool = false,
-        sharedMetadata: ShardedIndexFile? = nil,
-        weightsOnly: Bool = true)
-    async throws {
-        
-    }
-    
-    private static func shardFiles(
+    private func shardFiles(
         _ preTrainedModelNameOrPath: String,
         indexFileName: String,
         downloadArguments: DownloadArguments?)
@@ -73,10 +61,10 @@ extension PreTrainedModel {
         return (shardedFileNames, shardedIndexFile)
     }
     
-    private static func cachedFiles(_ pathOrRepoId: String, fileNames: [String], downloadArguments: DownloadArguments?) async throws -> [String]? {
+    private func cachedFiles(_ pathOrRepoId: String, fileNames: [String], downloadArguments: DownloadArguments?) async throws -> [String]? {
         let subFolder = downloadArguments?.subFolder != nil ? downloadArguments!.subFolder : ""
         let revision = downloadArguments?.revision ?? "main"
-        var cacheDir = downloadArguments?.cacheDir
+        // var cacheDir = downloadArguments?.cacheDir
     
         let fullFileNames = subFolder.isEmpty ? fileNames : fileNames.map { subFolder.hasSuffix("/") ? "\(subFolder)\($0)" : "\(subFolder)/\($0)"}
         
@@ -108,7 +96,7 @@ extension PreTrainedModel {
         return existingFiles
     }
     
-    private static func addVariant(weightsName: String, variant: String?) -> String {
+    private func addVariant(weightsName: String, variant: String?) -> String {
         if let variant {
             var weightParts = weightsName.split(separator: ".").map(String.init)
             weightParts.insert(variant, at: weightParts.count - 1)
@@ -117,7 +105,7 @@ extension PreTrainedModel {
         return weightsName
     }
     
-    private static func getResolvedCheckpointFiles(
+    private func getResolvedCheckpointFiles(
         _ pretrainedModelNameOrPath: String,
         variant: String? = nil,
         ggutFile: String? = nil,
@@ -223,6 +211,11 @@ extension PreTrainedModel {
             }
         }
         
+        if pretrainedModelNameOrPathType != .notLocal, let archiveFile {
+            ModelUtils.log("Loading local weights file \(archiveFile)")
+            resolvedArchiveFile = archiveFile
+        }
+        
         var checkpointFiles: [URL]? = []
         var shardedMetadata: ShardedIndexFile?
         
@@ -241,7 +234,7 @@ extension PreTrainedModel {
         return (checkpointFiles, shardedMetadata)
     }
 
-    static func fromPretrained(
+    func fromPretrained(
         _ pretrainedModelNameOrPath: String,
         config: PreTrainedConfig,
         useSafetensors: Bool?,
@@ -286,7 +279,6 @@ extension PreTrainedModel {
         }
                 
         // TO_DO: No explicit dtype setting
-        
         // TO_DO: No explicit quantizer handling
         
         // LoadPretrainedMOdel
