@@ -2,7 +2,65 @@ import Foundation
 import Hub
 
 extension PreTrainedModel {
-    private static func cachedFile(_ pathOrRepoId: String, fileNames: [String], downloadArguments: DownloadArguments?) async throws -> [String]? {
+    struct ShardedIndexFile: Codable {
+        struct Metadata: Codable {
+            let totalParameters: Int?
+            let totalSize: Int?
+        }
+        let metadata: Metadata?
+        let weightMap: [String: String]?
+    }
+    
+    private static func shardFiles(
+        _ preTrainedModelNameOrPath: String,
+        indexFileName: String,
+        downloadArguments: DownloadArguments?)
+    async throws -> ([String]?, ShardedIndexFile?) {
+        if ModelUtils.isLocal(indexFileName) != .file {
+            ModelUtils.log("Could not find index file for sharded files \(indexFileName)")
+            return (nil, nil)
+        }
+        
+        let indexFileData = try Data(contentsOf: URL(filePath: indexFileName))
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        guard let shardedIndexFile = try? decoder.decode(ShardedIndexFile.self, from: indexFileData),
+              let shardedFilesList = shardedIndexFile.weightMap?.values else {
+            ModelUtils.log("Could not parse JSON from the index file \(indexFileName)")
+            return (nil, nil)
+        }
+        
+        let fileList = Set(shardedFilesList).sorted()
+        guard !fileList.isEmpty else {
+            ModelUtils.log("Could not parse sharded files from the index file \(shardedIndexFile)")
+            return (nil, nil)
+        }
+        
+        var shardedFileNames: [String]? = []
+        
+        if ModelUtils.isLocal(preTrainedModelNameOrPath) == .directory {
+            var localDirectory = preTrainedModelNameOrPath
+            let subFolder = downloadArguments?.subFolder != nil ? downloadArguments!.subFolder : ""
+
+            if !subFolder.isEmpty {
+                localDirectory = (localDirectory + "/" + subFolder + "/").replacingOccurrences(of: "//", with: "/")
+            }
+                
+            for file in fileList {
+                if ModelUtils.isLocal(localDirectory + file) == .file {
+                    shardedFileNames?.append(file)
+                } else {
+                    ModelUtils.log("Could not find sharded weights file on local directory: \(localDirectory + file)")
+                }
+            }
+        } else {
+            shardedFileNames = try await cachedFiles(preTrainedModelNameOrPath, fileNames: Array(fileList), downloadArguments: downloadArguments)
+        }
+        
+        return (shardedFileNames, shardedIndexFile)
+    }
+    
+    private static func cachedFiles(_ pathOrRepoId: String, fileNames: [String], downloadArguments: DownloadArguments?) async throws -> [String]? {
         let subFolder = downloadArguments?.subFolder != nil ? downloadArguments!.subFolder : ""
         let revision = downloadArguments?.revision ?? "main"
         var cacheDir = downloadArguments?.cacheDir
@@ -54,7 +112,7 @@ extension PreTrainedModel {
         downloadArguments: DownloadArguments?,
         userAgent: [String: Any],
         transformersExplicitFilename: String? = nil
-    ) async throws -> ([URL]?, [String: Any]?) {
+    ) async throws -> ([URL]?, ShardedIndexFile?) {
         let subFolder = downloadArguments?.subFolder ?? ""
         
         if let transformersExplicitFilename {
@@ -143,7 +201,7 @@ extension PreTrainedModel {
             }
             
             if let fileName {
-                if let resolvedFileStr = try await cachedFile(
+                if let resolvedFileStr = try await cachedFiles(
                     pretrainedModelNameOrPath,
                     fileNames: [fileName],
                     downloadArguments: downloadArguments)?.first {
@@ -153,15 +211,21 @@ extension PreTrainedModel {
         }
         
         var checkpointFiles: [URL]? = []
-        if let isSharded, isSharded {
-            // TO_DO: Download checkpoint files here
+        var shardedMetadata: ShardedIndexFile?
+        
+        if let isSharded, isSharded, let resolvedArchiveFile {
+            var shardedFiles: [String]?
+            (shardedFiles, shardedMetadata) = try await shardFiles(pretrainedModelNameOrPath, indexFileName: resolvedArchiveFile.path(), downloadArguments: downloadArguments)
+            if let shardedFiles {
+                shardedFiles.forEach { checkpointFiles?.append(URL(filePath: $0)) }
+            }
         } else {
             if let resolvedArchiveFile {
                 checkpointFiles = [resolvedArchiveFile]
             }
         }
         
-        return (checkpointFiles, nil)
+        return (checkpointFiles, shardedMetadata)
     }
 
     static func fromPretrained(
