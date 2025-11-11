@@ -6,9 +6,22 @@ extension PreTrainedModel {
         struct Metadata: Codable {
             let totalParameters: Int?
             let totalSize: Int?
+            let format: String?
         }
         let metadata: Metadata?
         let weightMap: [String: String]?
+    }
+    
+    private static func loadPreTrainedModel(
+        model: PreTrainedModel,
+        stateDict: [String: Any]?,
+        checkpointFiles: [String]?,
+        pretrainedModelNameOrPath: String?,
+        ignoreMismatchedSizes: Bool = false,
+        sharedMetadata: ShardedIndexFile? = nil,
+        weightsOnly: Bool = true)
+    async throws {
+        
     }
     
     private static func shardFiles(
@@ -271,6 +284,19 @@ extension PreTrainedModel {
                 transformersExplicitFilename: config.transformersWeights
             )
         }
+                
+        // TO_DO: No explicit dtype setting
+        
+        // TO_DO: No explicit quantizer handling
+        
+        // LoadPretrainedMOdel
+        // TieWeights
+        // Eval()
+        // SetUseKernels
+        
+        // adjustGenerationFn() ???
+        
+        // Returns pretrainedmodel
         
         return nil
     }

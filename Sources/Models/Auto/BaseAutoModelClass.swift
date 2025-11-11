@@ -30,7 +30,13 @@ public class BaseAutoModelClass {
 
         if modelConfig == nil {
             modelConfig = await AutoConfig.fromPretrained(pretrainedModelNameOrPath, modelArguments: modelArguments)
-            // TO_DO: Call PreTrainedModel.fromPretrained() here
+            
+            if modelConfig == nil {
+                ModelUtils.log("Could not load config file from \(pretrainedModelNameOrPath)")
+                return
+            }
         }
+        
+        
     }
 }

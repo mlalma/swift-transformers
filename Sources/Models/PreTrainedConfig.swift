@@ -11,6 +11,7 @@ class PreTrainedConfig {
     // Instance properties - set by the deriving class
     var baseConfigKey: String = ""
     var attributeMap: [String: String] = [:]
+    var architectures: [String]?
 
     // Common attributes
     var returnDict: Bool
@@ -30,7 +31,6 @@ class PreTrainedConfig {
     var tieEncoderDecoder: Bool
 
     // Fine-tuning task attributes
-    var architectures: [String]?
     var finetuningTask: String?
     var id2label: [Int: String]?
     var label2id: [String: Int]?

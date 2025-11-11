@@ -1,0 +1,14 @@
+{
+  "metadata": {
+    "total_size": 84840,
+    "format": "safetensors"
+  },
+  "weight_map": {
+    "hidden1.weight": "model2-00001-of-00002.safetensors",
+    "hidden2.weight": "model2-00002-of-00002.safetensors",
+    "output.weight": "model2-00001-of-00002.safetensors",
+    "hidden1.bias": "model2-00002-of-00002.safetensors",
+    "hidden2.bias": "model2-00002-of-00002.safetensors",
+    "output.bias": "model2-00002-of-00002.safetensors"
+  }
+}

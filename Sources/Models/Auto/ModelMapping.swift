@@ -12,8 +12,8 @@ extension ModelMapping {
         "nanochat": "NanoChatForCausalLM",
     ]
 
-    static let causalLMNames: [String: String] = [
-        "nanochat": "NanoChatForCausalLM",
+    nonisolated(unsafe) static let causalLMNames: [String: () -> PreTrainedModel] = [
+        "nanochat": { NanoChatForCausalLM() },
     ]
 
     nonisolated(unsafe) static let configNames: [String: (Config) -> PreTrainedConfig] = [

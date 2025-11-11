@@ -35,6 +35,18 @@ struct PreTrainedConfigTests {
         #expect(nanoChatConfig.useCache == true)
         #expect(nanoChatConfig.vocabSize == 65536)
         #expect(nanoChatConfig.ropeParameters?.ropeTheta == 10000.0)
-        #expect(nanoChatConfig.ropeParameters?.ropeType == .default)        
+        #expect(nanoChatConfig.ropeParameters?.ropeType == .default)
+        #expect(nanoChatConfig.architectures == ["NanoChatForCausalLM"])
     }
+    
+    @Test("Model parsing test from local directory")
+    func parseModelFromLocalDirectory() async throws {
+        let configFile = Bundle.module.url(forResource: "model", withExtension: "safetensors")!
+        print(configFile)
+        let modelFileDir = configFile.deletingLastPathComponent()
+        print("modelFileDir \(modelFileDir)")
+        
+        await AutoModelForCausalLM.fromPretrained(modelFileDir.path(), modelArguments: [:])
+    }
+    
 }

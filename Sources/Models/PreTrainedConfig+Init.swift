@@ -32,7 +32,7 @@ extension PreTrainedConfig {
 
         var resolvedConfigFile: String?
         var configurationFile = configurationFileName
-        if localDirOrFile == .file || localDirOrFile == .directory {
+        if localDirOrFile == .file {
             resolvedConfigFile = pretrainedModelNameOrPath
         } else if ModelUtils.isRemote(pretrainedModelNameOrPath) {
             configurationFile = ggufFile != nil ? ggufFile : pretrainedModelNameOrPath
@@ -40,9 +40,15 @@ extension PreTrainedConfig {
         } else {
             configurationFile = ggufFile != nil ? ggufFile : (configurationFile != nil ? configurationFile! : Constants.defaultConfigFile)
             guard let configurationFile else { return nil }
-            let downloadedRepoDir = try await HubApi.shared.snapshot(from: pretrainedModelNameOrPath, revision: revision, matching: [configurationFile])
-            let filePath = downloadedRepoDir.appendingPathComponent(configurationFile)
-            resolvedConfigFile = FileManager.default.fileExists(atPath: filePath.path) ? filePath.path : nil
+            
+            if localDirOrFile == .directory {
+                let filePath = URL(fileURLWithPath: pretrainedModelNameOrPath).appendingPathComponent(configurationFile)
+                resolvedConfigFile = FileManager.default.fileExists(atPath: filePath.path) ? filePath.path : nil
+            } else {
+                let downloadedRepoDir = try await HubApi.shared.snapshot(from: pretrainedModelNameOrPath, revision: revision, matching: [configurationFile])
+                let filePath = downloadedRepoDir.appendingPathComponent(configurationFile)
+                resolvedConfigFile = FileManager.default.fileExists(atPath: filePath.path) ? filePath.path : nil
+            }
         }
 
         if ggufFile != nil {
