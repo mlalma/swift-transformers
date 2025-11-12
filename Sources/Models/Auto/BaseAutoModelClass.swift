@@ -8,7 +8,11 @@ public class BaseAutoModelClass {
         // This class can't be directly instantiated, use one of the derived classes to initialize it
     }
 
-    internal func fromPretrained(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any] = [:], modelMapping: [String: () -> PreTrainedModel]) async -> PreTrainedModel? {
+    internal func fromPretrained(
+        _ pretrainedModelNameOrPath: String,
+        modelArguments: [String: Any] = [:],
+        modelMapping: [String: () -> PreTrainedModel])
+    async -> PreTrainedModel? {
         let useSafetensors = modelArguments["use_safetensors"] as? Bool
         var modelConfig = modelArguments["config"] as? PreTrainedConfig
 
@@ -28,7 +32,8 @@ public class BaseAutoModelClass {
         }
         
         do {
-            return try await model.fromPretrained(pretrainedModelNameOrPath, config: modelConfig, useSafetensors: useSafetensors, modelArguments: modelArguments)
+            try await model.fromPretrained(pretrainedModelNameOrPath, config: modelConfig, useSafetensors: useSafetensors, modelArguments: modelArguments)
+            return model
         } catch {
             ModelUtils.log("Error when initializing model \(error)")
             return nil

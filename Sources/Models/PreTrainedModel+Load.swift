@@ -5,17 +5,17 @@ import PTReaderSwift
 
 extension PreTrainedModel {
     private func loadStateDict(
-        checkpointFileName: String,
+        checkpointFileName: URL,
         weightsOnly: Bool = true
-    ) async throws -> [String: MLXArray]? {        
-        if checkpointFileName.hasSuffix(".safetensors") {
-            let weights = try MLX.loadArrays(url: URL(filePath: checkpointFileName))
+    ) async throws -> [String: MLXArray]? {
+        if checkpointFileName.path().hasSuffix(".safetensors") {
+            let weights = try MLX.loadArrays(url: checkpointFileName)
             return weights
         } else {
             addInstantiators()
             
             let outputVal = try await Task { @PTReaderActor in
-              let file = try PTFile(fileName: URL(filePath: checkpointFileName))
+              let file = try PTFile(fileName: checkpointFileName)
               return file.parseData()
             }.value
             
@@ -29,7 +29,7 @@ extension PreTrainedModel {
     }
     
     private func loadShardFile(
-        shardFile: String?,
+        shardFile: URL?,
         stateDict: [String: MLXArray]?,
         weightsOnly: Bool
     ) async throws {
@@ -45,9 +45,8 @@ extension PreTrainedModel {
     }
     
     internal func loadPreTrainedModel(
-        model: PreTrainedModel,
         stateDict: [String: MLXArray]?,
-        checkpointFiles: [String]?,
+        checkpointFiles: [URL]?,
         pretrainedModelNameOrPath: String?,
         ignoreMismatchedSizes: Bool = false,
         sharedMetadata: ShardedIndexFile? = nil,

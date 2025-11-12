@@ -1,6 +1,7 @@
 import Foundation
 import Hub
-
+import MLX
+    
 extension PreTrainedModel {
     struct ShardedIndexFile: Codable {
         struct Metadata: Codable {
@@ -239,8 +240,8 @@ extension PreTrainedModel {
         config: PreTrainedConfig,
         useSafetensors: Bool?,
         modelArguments: [String: Any]
-    ) async throws -> PreTrainedModel? {
-        let stateDict = modelArguments["state_dict"] as? [String: Any]
+    ) async throws {
+        let stateDict = modelArguments["state_dict"] as? [String: MLXArray]
         let ggufFile = modelArguments["gguf_file"] as? String
         let variant = modelArguments["variant"] as? String
         let downloadArgs = DownloadArguments(
@@ -255,7 +256,7 @@ extension PreTrainedModel {
         
         if ggufFile != nil {
             ModelUtils.log("GGUF files are not yet supported")
-            return nil
+            return
         }
         
         let userAgent: [String: Any] = [
@@ -264,10 +265,13 @@ extension PreTrainedModel {
             "from_auto_class": true
         ]
 
+        var checkpointFiles: [URL]?
+        var sharedIndexFile: ShardedIndexFile?
+        
         if stateDict != nil {
             ModelUtils.log("State dict containing model weights is explicitly provided")
         } else {
-            _ = try await getResolvedCheckpointFiles(
+            (checkpointFiles, sharedIndexFile) = try await getResolvedCheckpointFiles(
                 pretrainedModelNameOrPath,
                 variant: variant,
                 ggutFile: nil,
@@ -280,16 +284,15 @@ extension PreTrainedModel {
                 
         // TO_DO: No explicit dtype setting
         // TO_DO: No explicit quantizer handling
-        
-        // LoadPretrainedMOdel
-        // TieWeights
-        // Eval()
-        // SetUseKernels
-        
-        // adjustGenerationFn() ???
-        
-        // Returns pretrainedmodel
-        
-        return nil
+
+        try await loadPreTrainedModel(
+            stateDict: stateDict,
+            checkpointFiles: checkpointFiles,
+            pretrainedModelNameOrPath: pretrainedModelNameOrPath,
+            sharedMetadata: sharedIndexFile)
+
+        // TO_DO: tieWeights()
+        // TO_DO: setUseKernels()
+        // TO_DO: adjustGenerationFn()
     }
 }

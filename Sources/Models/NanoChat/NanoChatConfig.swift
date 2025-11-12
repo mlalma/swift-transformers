@@ -112,9 +112,6 @@ class NanoChatConfig: PreTrainedConfig {
         // Call super.init to initialize base class properties
         super.init(fromConfig: config)
 
-        // Set model type
-        modelType = "nanochat"
-
         // Validate and standardize RoPE parameters
         validateAndStandardizeRopeParameters()
     }
