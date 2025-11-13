@@ -1,8 +1,8 @@
 import Foundation
 
-// 1. Configuration loading phase
-// 2. Model class determination phase
-// 3. Model weight loading phase
+// x 1. Configuration loading phase
+// x 2. Model class determination phase
+// - 3. Model weight loading phase
 // 4. Post processing
 
 public class AutoModelForCausalLM: BaseAutoModelClass {
