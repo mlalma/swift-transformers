@@ -3,7 +3,7 @@ import Hub
 import MLX
 import Version
 
-/// Base class for all model configurations. Handles parameters that are common to most models' configurations.
+/// Base class for all model configurations. Handles parameters that are common in most models.
 class PreTrainedConfig {
     // Model type
     var modelType: String?
@@ -11,6 +11,7 @@ class PreTrainedConfig {
     // Instance properties - set by the deriving class
     var baseConfigKey: String = ""
     var attributeMap: [String: String] = [:]
+    var architectures: [String]?
 
     // Common attributes
     var returnDict: Bool
@@ -30,7 +31,6 @@ class PreTrainedConfig {
     var tieEncoderDecoder: Bool
 
     // Fine-tuning task attributes
-    var architectures: [String]?
     var finetuningTask: String?
     var id2label: [Int: String]?
     var label2id: [String: Int]?
@@ -78,6 +78,7 @@ class PreTrainedConfig {
     var beginSuppressTokens: [Int]?
     var numBeamGroups: Int?
     var diversityPenalty: Double?
+    var transformersWeights: String?
 
     var ropeParameters: RopeParameters?
 
@@ -140,6 +141,7 @@ class PreTrainedConfig {
         decoderStartTokenId: Int? = nil,
         nameOrPath: String = Constants.nameOrPath,
         ropeParameters: RopeParameters? = nil,
+        transformersWeights: String? = nil,
         additionalParams: [String: Any] = [:],
         // Generation defaults
         maxLength: Int? = Constants.maxLength,
@@ -211,7 +213,8 @@ class PreTrainedConfig {
 
         // Name or path to the pretrained checkpoint
         self.nameOrPath = nameOrPath
-
+        self.transformersWeights = transformersWeights
+        
         // Additional attributes
         additionalProperties = additionalParams
 
@@ -306,6 +309,7 @@ class PreTrainedConfig {
         beginSuppressTokens = config[ConfigKeys.beginSuppressTokens, [Int].self]
         numBeamGroups = config[ConfigKeys.numBeamGroups, Int.self] ?? Constants.numBeamGroups
         diversityPenalty = config[ConfigKeys.diversityPenalty, Double.self] ?? Constants.diversityPenalty
+        transformersWeights = config[ConfigKeys.transformersWeights, String.self]
 
         // RopeParameters - if present in config
         if let ropeParameters = config[ConfigKeys.ropeParameters, Config.self] {
@@ -449,5 +453,6 @@ class PreTrainedConfig {
         static let diversityPenalty = "diversity_penalty"
         static let ropeParameters = "rope_parameters"
         static let numLabels = "num_labels"
+        static let transformersWeights = "transformers_weights"
     }
 }

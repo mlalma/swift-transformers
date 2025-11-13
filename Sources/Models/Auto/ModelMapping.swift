@@ -12,11 +12,11 @@ extension ModelMapping {
         "nanochat": "NanoChatForCausalLM",
     ]
 
-    static let causalLMNames: [String: String] = [
-        "nanochat": "NanoChatForCausalLM",
+    nonisolated(unsafe) static var causalLMNames: [String: () -> PreTrainedModel] = [
+        "nanochat": { NanoChatForCausalLM() },
     ]
 
-    nonisolated(unsafe) static let configNames: [String: (Config) -> PreTrainedConfig] = [
+    nonisolated(unsafe) static var configNames: [String: (Config) -> PreTrainedConfig] = [
         "nanochat": { NanoChatConfig(fromConfig: $0) },
     ]
 }

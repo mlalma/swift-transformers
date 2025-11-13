@@ -10,8 +10,8 @@ public class AutoModelForCausalLM: BaseAutoModelClass {
         super.init()
     }
 
-    public static func fromPretrained(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) {
+    public class func fromPretrained(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) async -> PreTrainedModel? {
         let model = AutoModelForCausalLM()
-        model.fromPretrained(pretrainedModelNameOrPath, modelArguments: modelArguments)
+        return await model.fromPretrained(pretrainedModelNameOrPath, modelArguments: modelArguments, modelMapping: ModelMapping.causalLMNames)
     }
 }

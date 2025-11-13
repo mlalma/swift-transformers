@@ -155,7 +155,7 @@ public protocol PreTrainedTokenizerModel: TokenizingModel {
 }
 
 enum TokenizerModel {
-    static let knownTokenizers: [String: PreTrainedTokenizerModel.Type] = [
+    nonisolated(unsafe) static let knownTokenizers: [String: PreTrainedTokenizerModel.Type] = [
         "BertTokenizer": BertTokenizer.self,
         "CodeGenTokenizer": BPETokenizer.self,
         "CodeLlamaTokenizer": BPETokenizer.self,

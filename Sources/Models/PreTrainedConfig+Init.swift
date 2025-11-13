@@ -3,42 +3,6 @@ import Hub
 import Version
 
 extension PreTrainedConfig {
-    /// - Note: This is a deprecated way to get the config file, Hub API should be used instead
-    private static func downloadUrl(_ url: String) async throws -> String {
-        guard let downloadURL = URL(string: url) else {
-            ModelUtils.log("Error: Invalid URL string: \(url)")
-            throw AutoModelError.invalidConfig
-        }
-
-        // Create a temporary file URL with random filename
-        let temporaryDirectoryURL = FileManager.default.temporaryDirectory
-        let randomFileName = UUID().uuidString + ".json"
-        let temporaryFileURL = temporaryDirectoryURL.appendingPathComponent(randomFileName)
-
-        ModelUtils.log("Downloading from: \(url)")
-        ModelUtils.log("Saving to temporary location: \(temporaryFileURL.path)")
-
-        let (localURL, response) = try await URLSession.shared.download(from: downloadURL)
-
-        // Validate HTTP response
-        guard let httpResponse = response as? HTTPURLResponse,
-              (200 ... 299).contains(httpResponse.statusCode)
-        else {
-            ModelUtils.log("Error: Invalid response type")
-            throw AutoModelError.invalidConfig
-        }
-
-        do {
-            // Move downloaded file to temporary location
-            try FileManager.default.moveItem(at: localURL, to: temporaryFileURL)
-            ModelUtils.log("Successfully downloaded file to: \(temporaryFileURL.path)")
-            return temporaryFileURL.path
-        } catch {
-            ModelUtils.log("Error moving file: \(error.localizedDescription)")
-            throw error
-        }
-    }
-
     private static func parseConfigurationFile(
         _ pretrainedModelNameOrPath: String,
         configurationFileName: String? = nil,
@@ -64,30 +28,27 @@ extension PreTrainedConfig {
             userAgent[Constants.usingPipeline] = fromPipeline
         }
 
-        // Check if pretrainedModelNameOrPath is a local directory
-        var isDirectory: ObjCBool = false
-        let fileManager = FileManager.default
-        var isLocal = fileManager.fileExists(atPath: pretrainedModelNameOrPath, isDirectory: &isDirectory) && isDirectory.boolValue
-
-        // Check if it's a direct file path
-        let subfolder = subFolder ?? ""
-        let filePath = (subfolder as NSString).appendingPathComponent(pretrainedModelNameOrPath)
-        let isFile = fileManager.fileExists(atPath: filePath) && !isDirectory.boolValue
+        let localDirOrFile = ModelUtils.isLocal(pretrainedModelNameOrPath, subFolder)
 
         var resolvedConfigFile: String?
         var configurationFile = configurationFileName
-        if isFile {
+        if localDirOrFile == .file {
             resolvedConfigFile = pretrainedModelNameOrPath
-            isLocal = true
-        } else if ModelUtils.isRemoteURL(pretrainedModelNameOrPath) {
+        } else if ModelUtils.isRemote(pretrainedModelNameOrPath) {
             configurationFile = ggufFile != nil ? ggufFile : pretrainedModelNameOrPath
-            resolvedConfigFile = try await downloadUrl(pretrainedModelNameOrPath)
+            resolvedConfigFile = try await ModelUtils.downloadUrl(pretrainedModelNameOrPath)
         } else {
             configurationFile = ggufFile != nil ? ggufFile : (configurationFile != nil ? configurationFile! : Constants.defaultConfigFile)
             guard let configurationFile else { return nil }
-            let downloadedRepoDir = try await HubApi.shared.snapshot(from: pretrainedModelNameOrPath, revision: revision, matching: [configurationFile])
-            let filePath = downloadedRepoDir.appendingPathComponent(configurationFile)
-            resolvedConfigFile = FileManager.default.fileExists(atPath: filePath.path) ? filePath.path : nil
+            
+            if localDirOrFile == .directory {
+                let filePath = URL(fileURLWithPath: pretrainedModelNameOrPath).appendingPathComponent(configurationFile)
+                resolvedConfigFile = FileManager.default.fileExists(atPath: filePath.path) ? filePath.path : nil
+            } else {
+                let downloadedRepoDir = try await HubApi.shared.snapshot(from: pretrainedModelNameOrPath, revision: revision, matching: [configurationFile])
+                let filePath = downloadedRepoDir.appendingPathComponent(configurationFile)
+                resolvedConfigFile = FileManager.default.fileExists(atPath: filePath.path) ? filePath.path : nil
+            }
         }
 
         if ggufFile != nil {
@@ -103,7 +64,7 @@ extension PreTrainedConfig {
         let resolvedConfigFileUrl = URL(fileURLWithPath: resolvedConfigFile)
         let configDict = try HubApi.shared.configuration(fileURL: resolvedConfigFileUrl)
 
-        if isLocal {
+        if localDirOrFile != .notLocal {
             ModelUtils.log("Did load configuration file \(resolvedConfigFile)")
         } else {
             ModelUtils.log("Did load configuration file \(configurationFile ?? "NO_FILE") from cache at \(resolvedConfigFile)")
@@ -170,7 +131,7 @@ extension PreTrainedConfig {
         return configurationFile
     }
 
-    static func getConfigDict(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) async -> Config? {
+    class func getConfigDict(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) async -> Config? {
         var configDict: Config?
 
         do {

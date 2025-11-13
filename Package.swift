@@ -15,6 +15,7 @@ let package = Package(
         .package(url: "https://github.com/huggingface/swift-jinja.git", from: "2.0.0"),
         .package(url: "https://github.com/ml-explore/mlx-swift", from: "0.29.1"),
         .package(url: "https://github.com/mxcl/Version.git", from: "2.0.0"),
+        .package(url: "https://github.com/mlalma/PTReaderSwift.git", from: "0.0.4"),
     ],
     targets: [
         .target(
@@ -34,6 +35,7 @@ let package = Package(
                 .product(name: "MLX", package: "mlx-swift"),
                 .product(name: "MLXNN", package: "mlx-swift"),
                 .product(name: "Version", package: "Version"),
+                .product(name: "PTReaderSwift", package: "PTReaderSwift"),
             ]
         ),
         .target(

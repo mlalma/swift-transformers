@@ -13,6 +13,7 @@ struct PreTrainedConfigTests {
         let config = await AutoConfig.fromPretrained(configFile.path())!
         let nanoChatConfig = config as! NanoChatConfig
         
+        #expect(nanoChatConfig.architectures == ["NanoChatForCausalLM"])
         #expect(nanoChatConfig.attentionBias == false)
         #expect(nanoChatConfig.attentionDropout == 0.0)
         #expect(nanoChatConfig.bosTokenId == 65527)
@@ -35,6 +36,6 @@ struct PreTrainedConfigTests {
         #expect(nanoChatConfig.useCache == true)
         #expect(nanoChatConfig.vocabSize == 65536)
         #expect(nanoChatConfig.ropeParameters?.ropeTheta == 10000.0)
-        #expect(nanoChatConfig.ropeParameters?.ropeType == .default)        
+        #expect(nanoChatConfig.ropeParameters?.ropeType == .default)
     }
 }
