@@ -123,8 +123,6 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
         highFreqFactor = config["high_freq_factor", Double.self]
     }
 
-    // MARK: - Codable
-
     enum CodingKeys: String, CodingKey {
         case ropeTheta = "rope_theta"
         case ropeType = "rope_type"
@@ -139,10 +137,7 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
         case highFreqFactor = "high_freq_factor"
     }
 
-    // MARK: - Methods
-
     /// Converts the RoPE parameters to a dictionary representation.
-    ///
     /// - Returns: A dictionary containing all non-nil parameters.
     func toDictionary() -> [String: Any] {
         var dict: [String: Any] = [
@@ -182,7 +177,6 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
     }
 
     /// Creates RoPE parameters from a dictionary.
-    ///
     /// - Parameter dictionary: Dictionary containing RoPE parameter values.
     /// - Returns: A RopeParameters instance if the dictionary contains valid data, nil otherwise.
     static func fromDictionary(_ dictionary: [String: Any]) -> RopeParameters? {
@@ -215,7 +209,6 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
     }
 
     /// Validates the RoPE parameters based on the RoPE type.
-    ///
     /// - Throws: ValidationError if the parameters are invalid for the specified RoPE type.
     func validate() throws {
         // Type-specific validation
@@ -321,8 +314,6 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
         return "RopeParameters(rope_theta: \(ropeTheta), rope_type: \(ropeType.rawValue))"
     }
 
-    // MARK: - Equatable
-
     static func == (lhs: RopeParameters, rhs: RopeParameters) -> Bool {
         return lhs.ropeTheta == rhs.ropeTheta &&
             lhs.ropeType == rhs.ropeType &&
@@ -337,8 +328,6 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
             lhs.highFreqFactor == rhs.highFreqFactor
     }
 }
-
-// MARK: - Validation Error
 
 /// Error types for RoPE parameter validation.
 enum ValidationError: Error, CustomStringConvertible {
@@ -361,11 +350,8 @@ enum ValidationError: Error, CustomStringConvertible {
     }
 }
 
-// MARK: - Convenience Extensions
-
 extension RopeParameters {
     /// Creates default RoPE parameters with the specified base theta.
-    ///
     /// - Parameter ropeTheta: The base period of the RoPE embeddings.
     /// - Returns: RopeParameters configured for default RoPE.
     static func `default`(ropeTheta: Double = 10000.0) -> RopeParameters {
@@ -373,7 +359,6 @@ extension RopeParameters {
     }
 
     /// Creates linear scaling RoPE parameters.
-    ///
     /// - Parameters:
     ///   - ropeTheta: The base period of the RoPE embeddings.
     ///   - factor: The scaling factor (must be >= 1.0).
@@ -383,7 +368,6 @@ extension RopeParameters {
     }
 
     /// Creates dynamic NTK scaling RoPE parameters.
-    ///
     /// - Parameters:
     ///   - ropeTheta: The base period of the RoPE embeddings.
     ///   - factor: The scaling factor (must be >= 1.0).
@@ -393,7 +377,6 @@ extension RopeParameters {
     }
 
     /// Creates Yarn RoPE parameters.
-    ///
     /// - Parameters:
     ///   - ropeTheta: The base period of the RoPE embeddings.
     ///   - factor: The scaling factor (must be >= 1.0).

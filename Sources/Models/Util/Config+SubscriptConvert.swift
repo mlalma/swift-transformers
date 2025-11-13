@@ -8,7 +8,6 @@ extension Config {
     ///   - output: The expected output type (e.g., String.self, Int.self)
     /// - Returns: The value associated with the key in the requested type, or nil if not found or conversion fails.
     subscript<T>(key: String, _ output: T.Type) -> T? {
-        // Check if the Config contains a dictionary
         guard let dict = dictionary() else {
             return nil
         }

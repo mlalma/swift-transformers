@@ -19,11 +19,19 @@ extension PreTrainedModel {
               return file.parseData()
             }.value
             
-            guard let weights = outputVal?.objectType([String: MLXArray].self) else {
-                ModelUtils.log("Couldn't parse .pt checkpoint file, outputVal: \(String(describing: outputVal))")
-                return nil
+            var weights: [String: MLXArray] = [:]
+            if let outputVal, let outputDict = outputVal.dict {
+                for (key, value) in outputDict {
+                    if let key = key as? String,
+                       let potentialArray = value as? (object: Any, objectType: String),
+                       potentialArray.objectType == "Tensor",
+                       let mlxArray = potentialArray.object as? MLXArray {
+                        weights[key] = mlxArray
+                    }
+                }
             }
-            
+                        
+            guard weights.keys.count > 0 else { return nil }
             return weights
         }
     }
