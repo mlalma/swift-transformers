@@ -258,7 +258,6 @@ extension RopeUtils {
         return (invFreq, Float(attentionFactor ?? 1.0))
     }
     
-    /*
     /// Computes inverse frequencies with LongRoPE scaling.
     /// Reference: https://github.com/microsoft/LongRoPE
     static func computeLongRopeParameters(
@@ -269,48 +268,57 @@ extension RopeUtils {
             throw RopeError.missingRopeParameters
         }
         
-        guard let shortFactor = ropeParams.shortFactor else {
-            throw RopeError.missingParameter("short_factor")
-        }
-        
-        guard let longFactor = ropeParams.longFactor else {
-            throw RopeError.missingParameter("long_factor")
-        }
-        
         let base = ropeParams.ropeTheta
         let partialRotaryFactor = config.partialRotaryFactor ?? 1.0
         let headDim = config.headDim ?? (config.hiddenSize / config.numAttentionHeads)
         let dim = Int(Double(headDim) * partialRotaryFactor)
-        let originalMaxPosEmbeddings = ropeParams.originalMaxPositionEmbeddings ?? config.maxPositionEmbeddings
         
+        guard let shortFactor = ropeParams.shortFactor else {
+            throw RopeError.missingParameter("short_factor")
+        }
+        guard let longFactor = ropeParams.longFactor else {
+            throw RopeError.missingParameter("long_factor")
+        }
+        guard var factor = ropeParams.factor else {
+            throw RopeError.missingParameter("factor")
+        }
+        
+        var attentionFactor = ropeParams.attentionFactor
+        let originalMaxPositionEmbeddings: Int
+        if let original = ropeParams.originalMaxPositionEmbeddings {
+            originalMaxPositionEmbeddings = original
+            factor = Double(config.maxPositionEmbeddings) / Double(original)
+        } else {
+            originalMaxPositionEmbeddings = config.maxPositionEmbeddings
+        }
+        
+        // Sets the attention factor as suggested in the paper
+        if attentionFactor == nil {
+            if factor <= 1.0 {
+                attentionFactor = 1.0
+            } else {
+                attentionFactor = sqrt(1.0 + log(Double(factor)) / log(Double(originalMaxPositionEmbeddings)))
+            }
+        }
+                
         // Determine which factors to use based on sequence length
         let extFactors: [Double]
-        if let seqLen = seqLen, seqLen > originalMaxPosEmbeddings {
+        if let seqLen = seqLen, seqLen > originalMaxPositionEmbeddings {
             extFactors = longFactor
         } else {
             extFactors = shortFactor
         }
-        
-        // Compute attention factor
-        let factor = ropeParams.factor ?? 1.0
-        let attentionFactor: Float
-        if let explicit = ropeParams.attentionFactor {
-            attentionFactor = Float(explicit)
-        } else if factor <= 1.0 {
-            attentionFactor = 1.0
-        } else {
-            attentionFactor = sqrt(1.0 + log(Float(factor)) / log(Float(originalMaxPosEmbeddings)))
-        }
-        
+                        
         // Compute inverse frequencies with extension factors
         let indices = MLXArray(stride(from: 0, to: dim, by: 2).map { Float($0) })
         let invFreqShape = indices / Float(dim)
         let extFactorsArray = MLXArray(extFactors.map { Float($0) })
         let invFreq = 1.0 / (extFactorsArray * MLX.pow(MLXArray(Float(base)), invFreqShape))
         
-        return (invFreq, attentionFactor)
+        return (invFreq, Float(attentionFactor ?? 1.0))
     }
     
+    /*
     /// Computes inverse frequencies for Llama 3.1 style RoPE.
     static func computeLlama3Parameters(
         config: NanoChatConfig,
