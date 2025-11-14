@@ -79,7 +79,10 @@ class PreTrainedConfig {
     var numBeamGroups: Int?
     var diversityPenalty: Double?
     var transformersWeights: String?
-
+    
+    // RoPE parameters
+    var partialRotaryFactor: Double?
+    var headDim: Int?
     var ropeParameters: RopeParameters?
 
     // Additional dynamic properties
@@ -168,7 +171,9 @@ class PreTrainedConfig {
         suppressTokens: [Int]? = nil,
         beginSuppressTokens: [Int]? = nil,
         numBeamGroups: Int? = Constants.numBeamGroups,
-        diversityPenalty: Double? = Constants.diversityPenalty
+        diversityPenalty: Double? = Constants.diversityPenalty,
+        partialRotaryFactor: Double? = nil,
+        headDim: Int? = nil
     ) {
         if let numLabels, let id2label, id2label.count != numLabels {
             ModelUtils.log("Warning: You passed `numLabels=\(numLabels)` " +
@@ -250,6 +255,8 @@ class PreTrainedConfig {
         self.beginSuppressTokens = beginSuppressTokens
         self.numBeamGroups = numBeamGroups
         self.diversityPenalty = diversityPenalty
+        self.partialRotaryFactor = partialRotaryFactor
+        self.headDim = headDim
     }
 
     init(fromConfig config: Config) {
@@ -310,6 +317,8 @@ class PreTrainedConfig {
         numBeamGroups = config[ConfigKeys.numBeamGroups, Int.self] ?? Constants.numBeamGroups
         diversityPenalty = config[ConfigKeys.diversityPenalty, Double.self] ?? Constants.diversityPenalty
         transformersWeights = config[ConfigKeys.transformersWeights, String.self]
+        partialRotaryFactor = config[ConfigKeys.partialRotaryFactor, Double.self]
+        headDim = config[ConfigKeys.headDim, Int.self]
 
         // RopeParameters - if present in config
         if let ropeParameters = config[ConfigKeys.ropeParameters, Config.self] {
@@ -454,5 +463,7 @@ class PreTrainedConfig {
         static let ropeParameters = "rope_parameters"
         static let numLabels = "num_labels"
         static let transformersWeights = "transformers_weights"
+        static let partialRotaryFactor = "partial_rotary_factor"
+        static let headDim = "head_dim"
     }
 }
