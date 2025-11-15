@@ -97,7 +97,7 @@ final class NanoChatAttention: Module {
         queryStates = qNorm(queryStates)
         keyStates = kNorm(keyStates)
 
-        // TODO: Doesn't handle caching, should it?
+        // TODO: Doesn't handle caching
                 
         // Compute attention using eager attention forward
         // TODO: Other attention functions (e.g. flash attention) not yet supported
