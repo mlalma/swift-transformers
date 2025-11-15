@@ -46,14 +46,10 @@ extension RopeUtils {
             return try computeDynamicNTKParameters(config: config, seqLen: seqLen)
         case .yarn:
             return try computeYarnParameters(config: config, seqLen: seqLen)
-        /*
         case .longrope:
             return try computeLongRopeParameters(config: config, seqLen: seqLen)
         case .llama3:
             return try computeLlama3Parameters(config: config, seqLen: seqLen)
-        */
-        default:
-            throw RopeError.unsupportedRopeType(ropeType)
         }
     }
     
@@ -71,7 +67,7 @@ extension RopeUtils {
         }
         
         let base = ropeParams.ropeTheta
-        let dim = config.hiddenSize / config.numAttentionHeads
+        let dim = config.headDim ?? (config.hiddenSize / config.numAttentionHeads)
         // Unused in default RoPE
         let attentionFactor: Float = 1.0
         
