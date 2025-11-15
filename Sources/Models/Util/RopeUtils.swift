@@ -317,8 +317,7 @@ extension RopeUtils {
         
         return (invFreq, Float(attentionFactor ?? 1.0))
     }
-    
-    /*
+
     /// Computes inverse frequencies for Llama 3.1 style RoPE.
     static func computeLlama3Parameters(
         config: NanoChatConfig,
@@ -328,6 +327,17 @@ extension RopeUtils {
             throw RopeError.missingRopeParameters
         }
         
+        let base = ropeParams.ropeTheta
+        let partialRotaryFactor = config.partialRotaryFactor ?? 1.0
+        let headDim = config.headDim ?? (config.hiddenSize / config.numAttentionHeads)
+        let dim = Int(Double(headDim) * partialRotaryFactor)
+        let attentionFactor: Float = 1.0
+
+        // Compute base inverse frequencies
+        let indices = MLXArray(stride(from: 0, to: dim, by: 2).map { Float($0) })
+        let exponents = indices / Float(dim)
+        let invFreq = 1.0 / MLX.pow(MLXArray(Float(base)), exponents)
+
         guard let factor = ropeParams.factor else {
             throw RopeError.missingParameter("factor")
         }
@@ -344,44 +354,27 @@ extension RopeUtils {
             throw RopeError.missingParameter("original_max_position_embeddings")
         }
         
-        let base = ropeParams.ropeTheta
-        let partialRotaryFactor = config.partialRotaryFactor ?? 1.0
-        let headDim = config.headDim ?? (config.hiddenSize / config.numAttentionHeads)
-        let dim = Int(Double(headDim) * partialRotaryFactor)
-        let attentionFactor: Float = 1.0
-        
-        // Compute base inverse frequencies
-        let indices = MLXArray(stride(from: 0, to: dim, by: 2).map { Float($0) })
-        let exponents = indices / Float(dim)
-        let invFreq = 1.0 / MLX.pow(MLXArray(Float(base)), exponents)
-        
         let lowFreqWavelen = Float(originalMaxPosEmbeddings) / Float(lowFreqFactor)
         let highFreqWavelen = Float(originalMaxPosEmbeddings) / Float(highFreqFactor)
-        
-        // Compute wavelengths
         let wavelen = 2.0 * Float.pi / invFreq
         
-        // Apply Llama3 scaling logic
-        let invFreqLlama = MLX.where_(
-            wavelen .> lowFreqWavelen,
-            invFreq / Float(factor),
-            invFreq
-        )
-        
-        // Smooth factor for medium frequencies
-        let smoothFactor = (Float(originalMaxPosEmbeddings) / wavelen - Float(lowFreqFactor)) /
-                          (Float(highFreqFactor) - Float(lowFreqFactor))
-        let smoothedInvFreq = (1.0 - smoothFactor) * invFreqLlama / Float(factor) +
-                             smoothFactor * invFreqLlama
-        
-        let isMediumFreq = MLX.logicalAnd(
-            wavelen .>= highFreqWavelen,
-            wavelen .<= lowFreqWavelen
-        )
-        
-        let finalInvFreq = MLX.where_(isMediumFreq, smoothedInvFreq, invFreqLlama)
-        
-        return (finalInvFreq, attentionFactor)
+        // wavelen < high_freq_wavelen: do nothing
+        // wavelen > low_freq_wavelen: divide by factor
+        let highFreqMask = wavelen .> highFreqWavelen
+        let lowFreqMask = wavelen .> lowFreqWavelen
+
+        // For high frequencies, keep original inv_freq; for low frequencies, divide by factor
+        let invFreqLlama = lowFreqMask * (invFreq / factor) + (.!lowFreqMask) * invFreq
+
+        // otherwise: interpolate between the two, using a smooth factor
+        let smoothFactor = (originalMaxPosEmbeddings / wavelen - lowFreqFactor) / (highFreqFactor - lowFreqFactor)
+        let smoothedInvFreq = (1 - smoothFactor) * invFreqLlama / factor + smoothFactor * invFreqLlama
+
+        // Create medium frequency mask (not high and not low)
+        let isMediumFreq = .!highFreqMask * .!lowFreqMask
+
+        // Apply the medium frequency smoothing where appropriate
+        let finalInvFreqLlama = isMediumFreq * smoothedInvFreq + (.!isMediumFreq) * invFreqLlama
+        return (finalInvFreqLlama, attentionFactor)
     }
-    */
 }
