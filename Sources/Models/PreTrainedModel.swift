@@ -1,7 +1,8 @@
 import Foundation
 import MLX
+import MLXNN
 
-public class PreTrainedModel {
+public class PreTrainedModel : Module {
     /// Hook to add instantiators to .pt file reader for resolving classes during the model loading.
     /// Should be overridden by derived model class in case it needs to add some specific instantiators to be able to read .pt / .bin files
     func addInstantiators() {

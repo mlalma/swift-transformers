@@ -1,17 +1,15 @@
 import Foundation
 import Hub
 
-public class BaseAutoModelClass {
-        
-    
-    init() {
+public class BaseAutoModelClass {            
+    internal init() {
         // This class can't be directly instantiated, use one of the derived classes to initialize it
     }
 
     internal func fromPretrained(
         _ pretrainedModelNameOrPath: String,
         modelArguments: [String: Any] = [:],
-        modelMapping: [String: () -> PreTrainedModel])
+        modelMapping: [String: (PreTrainedConfig) throws -> PreTrainedModel])
     async -> PreTrainedModel? {
         let useSafetensors = modelArguments["use_safetensors"] as? Bool
         var modelConfig = modelArguments["config"] as? PreTrainedConfig
@@ -26,7 +24,7 @@ public class BaseAutoModelClass {
             return nil
         }
         
-        guard let model = modelMapping[modelType]?() else {
+        guard let model = try? modelMapping[modelType]?(modelConfig) else {
             ModelUtils.log("Could not instantiate model of type \(modelType)")
             return nil
         }

@@ -1,6 +1,6 @@
 import Foundation
 
 enum AutoModelError: Error {
-    case invalidConfig
+    case invalidConfig(String? = nil)
     case noModelDataToLoad
 }
