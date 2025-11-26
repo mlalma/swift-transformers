@@ -2,7 +2,7 @@ import Foundation
 import MLX
 import MLXNN
 
-class NanoChatModel: Module {
+final class NanoChatModel: Module {
     let embedTokens: Embedding
     let layers: [NanoChatDecoderLayer]
     let norm: NanoChatRMSNorm
@@ -10,11 +10,16 @@ class NanoChatModel: Module {
     let initialNorm: NanoChatRMSNorm
     let config: NanoChatConfig
 
-    public init(fromConfig config: NanoChatConfig) throws {
+    init(fromConfig config: NanoChatConfig, weights: [String: MLXArray]) throws {
         self.config = config
-        self.embedTokens = Embedding(embeddingCount: config.vocabSize, dimensions: config.hiddenSize)
+        
+        guard let embedTokens = weights[Constants.embedTokens] else {
+            throw AutoModelError.invalidConfig("No embedding tokens found in weights")
+        }
+        
+        self.embedTokens = Embedding(weight: embedTokens)
         self.layers = try (0..<config.numHiddenLayers).map { layerIdx in
-            guard let layer = NanoChatDecoderLayer(config: config, layerIdx: layerIdx) else {
+            guard let layer = NanoChatDecoderLayer(config: config, layerIdx: layerIdx, weights: weights) else {
                 throw AutoModelError.invalidConfig("Invalid config for decoder layer \(layerIdx)")
             }
             return layer
@@ -24,7 +29,7 @@ class NanoChatModel: Module {
         self.initialNorm = NanoChatRMSNorm(eps: Float(config.rmsNormEps))
     }
 
-    public func callAsFunction(
+    func callAsFunction(
         inputIds: MLXArray,
         inputsEmbeds: MLXArray? = nil,
         positionIds: MLXArray,
@@ -48,5 +53,9 @@ class NanoChatModel: Module {
         currentHiddenStates = norm(currentHiddenStates)
 
         return currentHiddenStates
+    }
+    
+    struct Constants {
+        static let embedTokens = "model.embed_tokens.weight"
     }
 }

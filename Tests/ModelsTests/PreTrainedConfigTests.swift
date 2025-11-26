@@ -10,7 +10,7 @@ struct PreTrainedConfigTests {
     @Test("Read nanochat configuration")
     func readNanochatConfiguration() async throws {
         let configFile = Bundle.module.url(forResource: "nanochat_config", withExtension: "json")!
-        let config = await AutoConfig.fromPretrained(configFile.path())!
+        let config = await AutoConfig.from(pretrained: configFile.path())!
         let nanoChatConfig = config as! NanoChatConfig
         
         #expect(nanoChatConfig.architectures == ["NanoChatForCausalLM"])

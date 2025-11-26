@@ -10,7 +10,7 @@ public class PreTrainedModel : Module {
     
     /// Entry point to add intialized weights to the model.
     /// Should be overridden by the derived model class.
-    func loadWeightsToModel(_ weights: [String: MLXArray]) {
+    func loadWeightsToModel(_ weights: [String: MLXArray]) throws {
         ModelUtils.log("Should be overridden by the derived model class")
     }
 }

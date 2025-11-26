@@ -22,7 +22,8 @@ final class NanoChatAttention: Module {
     /// - Parameters:
     ///   - config: The model configuration.
     ///   - layerIdx: Index of the layer in the model.
-    init(config: NanoChatConfig, layerIdx: Int) {
+    ///   - weights: Dictionary of weight tensors.
+    init(config: NanoChatConfig, layerIdx: Int, weights: [String: MLXArray]) throws {
         self.config = config
         self.layerIdx = layerIdx
         
@@ -34,15 +35,32 @@ final class NanoChatAttention: Module {
         
         // Compute scaling factor: 1 / sqrt(head_dim)
         self.scaling = pow(Float(headDim), -0.5)
-                
-        // Initialize projection layers
-        let qDim = config.numAttentionHeads * headDim
-        let kvDim = config.numKeyValueHeads * headDim
+                        
+        // Build weight keys for this layer
+        let qWeightKey = Constants.weightKey(layerIdx: layerIdx, projName: "q_proj")
+        let kWeightKey = Constants.weightKey(layerIdx: layerIdx, projName: "k_proj")
+        let vWeightKey = Constants.weightKey(layerIdx: layerIdx, projName: "v_proj")
+        let oWeightKey = Constants.weightKey(layerIdx: layerIdx, projName: "o_proj")
         
-        self.qProj = Linear(config.hiddenSize, qDim, bias: config.attentionBias)
-        self.kProj = Linear(config.hiddenSize, kvDim, bias: config.attentionBias)
-        self.vProj = Linear(config.hiddenSize, kvDim, bias: config.attentionBias)
-        self.oProj = Linear(qDim, config.hiddenSize, bias: config.attentionBias)
+        // Verify all required weights exist
+        guard let qWeight = weights[qWeightKey] else {
+            throw AutoModelError.invalidConfig("Missing weight: \(qWeightKey)")
+        }
+        guard let kWeight = weights[kWeightKey] else {
+            throw AutoModelError.invalidConfig("Missing weight: \(kWeightKey)")
+        }
+        guard let vWeight = weights[vWeightKey] else {
+            throw AutoModelError.invalidConfig("Missing weight: \(vWeightKey)")
+        }
+        guard let oWeight = weights[oWeightKey] else {
+            throw AutoModelError.invalidConfig("Missing weight: \(oWeightKey)")
+        }
+        
+        // Initialize Linear layers without bias
+        self.qProj = Linear(weight: qWeight)
+        self.kProj = Linear(weight: kWeight)
+        self.vProj = Linear(weight: vWeight)
+        self.oProj = Linear(weight: oWeight)
         
         // Initialize RMS normalization layers
         self.qNorm = NanoChatRMSNorm(eps: Float(config.rmsNormEps))
@@ -226,5 +244,22 @@ final class NanoChatAttention: Module {
         attnOutput = attnOutput.transposed(axes: [0, 2, 1, 3])
         
         return (attnOutput, attnWeights)
+    }
+    
+    // MARK: - Constants
+    
+    struct Constants {
+        static let layersPrefix = "model.layers"
+        static let selfAttnPrefix = "self_attn"
+        static let weightSuffix = "weight"
+        
+        /// Generates the weight key for a specific layer and projection.
+        /// - Parameters:
+        ///   - layerIdx: The layer index.
+        ///   - projName: The projection name (e.g., "q_proj", "k_proj", "v_proj", "o_proj").
+        /// - Returns: The full weight key string.
+        static func weightKey(layerIdx: Int, projName: String) -> String {
+            return "\(layersPrefix).\(layerIdx).\(selfAttnPrefix).\(projName).\(weightSuffix)"
+        }
     }
 }

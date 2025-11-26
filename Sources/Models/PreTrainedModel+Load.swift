@@ -46,9 +46,9 @@ extension PreTrainedModel {
                 ModelUtils.log("Could not load state dictionary of the model")
                 return
             }
-            loadWeightsToModel(loadedDict)
+            try loadWeightsToModel(loadedDict)
         } else if let stateDict {
-            loadWeightsToModel(stateDict)
+            try loadWeightsToModel(stateDict)
         }
     }
     

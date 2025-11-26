@@ -15,11 +15,17 @@ final class NanoChatDecoderLayer: Module {
     /// - Parameters:
     ///   - config: Configuration for the NanoChat model.
     ///   - layerIdx: Index of this layer in the model.
-    init?(config: NanoChatConfig, layerIdx: Int) {
+    ///   - weights: Weights to use for initialization
+    init?(config: NanoChatConfig, layerIdx: Int, weights: [String: MLXArray]) {
         self.hiddenSize = config.hiddenSize
         
         // Initialize self-attention layer
-        self.selfAttn = NanoChatAttention(config: config, layerIdx: layerIdx)
+        do {
+            self.selfAttn = try NanoChatAttention(config: config, layerIdx: layerIdx, weights: weights)
+        } catch {
+            print("Failed to initialize NanoChatAttention: \(error)")
+            return nil
+        }
         
         // Initialize MLP (feed-forward) layer
         guard let mlp = NanoChatMLP(config: config) else {

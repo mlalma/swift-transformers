@@ -4,21 +4,29 @@ import MLX
 import MLXNN
 
 final class NanoChatForCausalLM : PreTrainedModel {
-    let model: NanoChatModel
-    let vocabSize: Int
-    let lmHead: Linear
+    let config: NanoChatConfig
+    var model: NanoChatModel?
+    var lmHead: Linear?
     
     init(fromConfig config: NanoChatConfig?) throws {
         guard let config else {
             throw AutoModelError.invalidConfig("Wrong config for NanoChatForCausalLM")
         }
         
-        model = try NanoChatModel(fromConfig: config)
-        self.vocabSize = config.vocabSize
-        self.lmHead = Linear(config.hiddenSize, config.vocabSize, bias: false)
+        self.config = config
     }
     
-    override func loadWeightsToModel(_ weights: [String: MLXArray]) {
+    override func loadWeightsToModel(_ weights: [String: MLXArray]) throws {
+        for w in weights.keys.sorted() {
+            print(w)
+        }
+        
+        guard let lmHeadWeights = weights[Constants.lmHeadWeights] else {
+            throw AutoModelError.noModelDataToLoad
+        }
+        
+        lmHead = Linear(weight: lmHeadWeights)
+        model = try NanoChatModel(fromConfig: config, weights: weights)
         ModelUtils.log("Should be overridden by the derived model class")
     }
 
@@ -28,5 +36,9 @@ final class NanoChatForCausalLM : PreTrainedModel {
         positionIds: MLXArray,
     ) -> MLXArray {
         return MLXArray([])
+    }
+    
+    struct Constants {
+        static let lmHeadWeights = "lm_head.weight"
     }
 }

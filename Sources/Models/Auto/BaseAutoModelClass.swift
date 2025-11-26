@@ -6,8 +6,8 @@ public class BaseAutoModelClass {
         // This class can't be directly instantiated, use one of the derived classes to initialize it
     }
 
-    internal func fromPretrained(
-        _ pretrainedModelNameOrPath: String,
+    internal func from(
+        pretrained pretrainedModelNameOrPath: String,
         modelArguments: [String: Any] = [:],
         modelMapping: [String: (PreTrainedConfig) throws -> PreTrainedModel])
     async -> PreTrainedModel? {
@@ -15,7 +15,7 @@ public class BaseAutoModelClass {
         var modelConfig = modelArguments["config"] as? PreTrainedConfig
 
         if modelConfig == nil {
-            modelConfig = await AutoConfig.fromPretrained(pretrainedModelNameOrPath, modelArguments: modelArguments)
+            modelConfig = await AutoConfig.from(pretrained: pretrainedModelNameOrPath, modelArguments: modelArguments)
         }
         
         guard let modelConfig,

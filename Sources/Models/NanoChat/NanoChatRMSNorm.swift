@@ -9,15 +9,15 @@ final class NanoChatRMSNorm: Module {
         self.eps = eps
         super.init()
     }
-    
+
+    /// Compute RMS normalization: x * rsqrt(mean(x^2) + eps)
     private func norm(_ x: MLXArray) -> MLXArray {
-        // Compute RMS normalization: x * rsqrt(mean(x^2) + eps)
         let variance = pow(x, 2).mean(axes: [-1], keepDims: true)
         return x * rsqrt(variance + eps)
     }
-    
+
+    /// Apply normalization preserving the original type
     func callAsFunction(_ x: MLXArray) -> MLXArray {
-        // Apply normalization preserving the original type
         let normalized = norm(x.asType(.float32))
         return normalized.asType(x.dtype)
     }
