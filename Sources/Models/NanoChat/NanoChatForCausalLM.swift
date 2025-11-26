@@ -17,10 +17,6 @@ final class NanoChatForCausalLM : PreTrainedModel {
     }
     
     override func loadWeightsToModel(_ weights: [String: MLXArray]) throws {
-        for w in weights.keys.sorted() {
-            print(w)
-        }
-        
         guard let lmHeadWeights = weights[Constants.lmHeadWeights] else {
             throw AutoModelError.noModelDataToLoad
         }
