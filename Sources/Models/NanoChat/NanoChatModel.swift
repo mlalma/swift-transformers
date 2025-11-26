@@ -19,10 +19,7 @@ final class NanoChatModel: Module {
         
         self.embedTokens = Embedding(weight: embedTokens)
         self.layers = try (0..<config.numHiddenLayers).map { layerIdx in
-            guard let layer = NanoChatDecoderLayer(config: config, layerIdx: layerIdx, weights: weights) else {
-                throw AutoModelError.invalidConfig("Invalid config for decoder layer \(layerIdx)")
-            }
-            return layer
+            return try NanoChatDecoderLayer(config: config, layerIdx: layerIdx, weights: weights)
         }
         self.norm = NanoChatRMSNorm(eps: Float(config.rmsNormEps))
         self.rotaryEmbedding = try NanoChatRotaryEmbedding(config: config)

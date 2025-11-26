@@ -10,22 +10,36 @@ final class NanoChatMLP: Module {
     let fc2: Linear
     
     /// Initialize the MLP with the given configuration.
-    /// - Parameter config: Configuration for the NanoChat model.
-    init?(config: NanoChatConfig) {
+    /// - Parameters:
+    ///   - config: Configuration for the NanoChat model.
+    ///   - layerIdx: Index of the layer in the model.
+    ///   - weights: Dictionary of weight tensors.
+    init(config: NanoChatConfig, layerIdx: Int, weights: [String: MLXArray]) throws {
         self.config = config
         
         // Initialize activation function based on config
         guard let activation = ActivationFunction(activationFunction: config.hiddenAct) else {
-            ModelUtils.log("Unknown activation function: \(config.hiddenAct)")
-            return nil
+            throw AutoModelError.invalidConfig("Unknown activation function: \(config.hiddenAct)")
         }
         self.activationFn = activation
         
-        // Initialize linear layers without bias
-        self.fc1 = Linear(config.hiddenSize, config.intermediateSize, bias: false)
-        self.fc2 = Linear(config.intermediateSize, config.hiddenSize, bias: false)
+        // Build weight keys for this layer
+        let fc1WeightKey = Constants.weightKey(layerIdx: layerIdx, fcName: "fc1")
+        let fc2WeightKey = Constants.weightKey(layerIdx: layerIdx, fcName: "fc2")
         
-        super.init()
+        // Verify all required weights exist
+        guard let fc1Weight = weights[fc1WeightKey] else {
+            throw AutoModelError.invalidConfig("Missing weight: \(fc1WeightKey)")
+        }
+        guard let fc2Weight = weights[fc2WeightKey] else {
+            throw AutoModelError.invalidConfig("Missing weight: \(fc2WeightKey)")
+        }
+        
+        // Initialize linear layers without bias
+        self.fc1 = Linear(weight: fc1Weight)
+        self.fc2 = Linear(weight: fc2Weight)
+        
+        super.init()                
     }
     
     /// Forward pass through the MLP.
@@ -37,5 +51,22 @@ final class NanoChatMLP: Module {
         hiddenStates = activationFn(hiddenStates)
         hiddenStates = fc2(hiddenStates)
         return hiddenStates
+    }
+    
+    // MARK: - Constants
+    
+    struct Constants {
+        static let layersPrefix = "model.layers"
+        static let mlpPrefix = "mlp"
+        static let weightSuffix = "weight"
+        
+        /// Generates the weight key for a specific layer and fully connected layer.
+        /// - Parameters:
+        ///   - layerIdx: The layer index.
+        ///   - fcName: The fully connected layer name (e.g., "fc1", "fc2").
+        /// - Returns: The full weight key string.
+        static func weightKey(layerIdx: Int, fcName: String) -> String {
+            return "\(layersPrefix).\(layerIdx).\(mlpPrefix).\(fcName).\(weightSuffix)"
+        }
     }
 }
