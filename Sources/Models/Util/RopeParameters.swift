@@ -1,23 +1,39 @@
 import Foundation
 import Hub
 
+/// Error types for RoPE parameter validation.
+public enum RopeValidationError: Error, CustomStringConvertible {
+    case invalidRopeType(String)
+    case invalidFactor(String)
+    case invalidParameter(String)
+    case missingParameter(String)
+
+    public var description: String {
+        switch self {
+        case let .invalidRopeType(type):
+            return "Invalid RoPE type: \(type). Must be one of: default, linear, dynamic, yarn, longrope, llama3"
+        case let .invalidFactor(message):
+            return "Invalid factor: \(message)"
+        case let .invalidParameter(message):
+            return "Invalid parameter: \(message)"
+        case let .missingParameter(message):
+            return "Missing required parameter: \(message)"
+        }
+    }
+}
+
 /// RoPE type variants supported by the framework.
-enum RopeType: String, Codable, CaseIterable {
+public enum RopeType: String, Codable, CaseIterable, Sendable {
     /// Original RoPE implementation
     case `default`
-
     /// Linear scaling RoPE
     case linear
-
     /// Dynamic NTK scaling RoPE
     case dynamic
-
     /// YaRN (Yet another RoPE extensioN)
     case yarn
-
     /// Long RoPE for extended context
     case longrope
-
     /// Llama 3 specific RoPE implementation
     case llama3
 }
@@ -27,86 +43,91 @@ enum RopeType: String, Codable, CaseIterable {
 struct RopeParameters: Codable, Equatable, CustomStringConvertible {
     /// The base period of the RoPE embeddings.
     let ropeTheta: Double
-
     /// The sub-variant of RoPE to use.
     let ropeType: RopeType
-
     /// The scaling factor to apply to the RoPE embeddings.
     /// Used with all rope types except 'default'.
     let factor: Double?
-
     /// The original max position embeddings used during pretraining.
     /// Used with 'dynamic', 'longrope' and 'llama3'.
     let originalMaxPositionEmbeddings: Int?
-
     /// The scaling factor to be applied on the attention computation.
     /// Used with 'yarn' and 'longrope'.
     let attentionFactor: Double?
-
+    /// Acts scalar augmenting `log(factor)` when computing the numerator for the inferred value of `attention_factor`
+    /// Used with 'yarn'.
+    let mscale: Double?
+    /// Acts scalar augmenting `log(factor)` when computing the denominator for the inferred value of `attention_factor`
+    /// Used with 'yarn'.
+    let mscaleAllDim: Double?
     /// Parameter to set the boundary for extrapolation in the linear ramp function.
     /// Only used with 'yarn'. Defaults to 32 if unspecified.
     let betaFast: Double?
-
     /// Parameter to set the boundary for interpolation in the linear ramp function.
     /// Only used with 'yarn'. Defaults to 1 if unspecified.
     let betaSlow: Double?
-
     /// The scaling factor to be applied to short contexts.
     /// Only used with 'longrope'.
     let shortFactor: [Double]?
-
     /// The scaling factor to be applied to long contexts.
     /// Only used with 'longrope'.
     let longFactor: [Double]?
-
     /// Scaling factor applied to low frequency components of the RoPE.
     /// Only used with 'llama3'.
     let lowFreqFactor: Double?
-
     /// Scaling factor applied to high frequency components of the RoPE.
     /// Only used with 'llama3'.
     let highFreqFactor: Double?
-
-    // MARK: - Initialization
+    /// Whether to truncate correction range values in YaRN.
+    /// Only used with 'yarn'. Defaults to true if unspecified.
+    let truncate: Bool?
 
     /// Initialize RoPE parameters.
-    ///
     /// - Parameters:
     ///   - ropeTheta: The base period of the RoPE embeddings.
     ///   - ropeType: The RoPE variant type (defaults to .default).
     ///   - factor: Scaling factor for RoPE embeddings.
     ///   - originalMaxPositionEmbeddings: Original max position embeddings from pretraining.
     ///   - attentionFactor: Scaling factor for attention computation.
+    ///   - mscale: Scaling factor for attention computation.
+    ///   - mscaleAllDim: Scaling factor for attention computation.
     ///   - betaFast: Boundary for extrapolation (yarn only).
     ///   - betaSlow: Boundary for interpolation (yarn only).
     ///   - shortFactor: Scaling for short contexts (longrope only).
     ///   - longFactor: Scaling for long contexts (longrope only).
     ///   - lowFreqFactor: Low frequency scaling (llama3 only).
     ///   - highFreqFactor: High frequency scaling (llama3 only).
+    ///   - truncate: Whether to truncate correction range values (yarn only).
     init(
         ropeTheta: Double,
         ropeType: RopeType = .default,
         factor: Double? = nil,
         originalMaxPositionEmbeddings: Int? = nil,
         attentionFactor: Double? = nil,
+        mscale: Double? = nil,
+        mscaleAllDim: Double? = nil,
         betaFast: Double? = nil,
         betaSlow: Double? = nil,
         shortFactor: [Double]? = nil,
         longFactor: [Double]? = nil,
         lowFreqFactor: Double? = nil,
-        highFreqFactor: Double? = nil
+        highFreqFactor: Double? = nil,
+        truncate: Bool? = nil
     ) {
         self.ropeTheta = ropeTheta
         self.ropeType = ropeType
         self.factor = factor
         self.originalMaxPositionEmbeddings = originalMaxPositionEmbeddings
         self.attentionFactor = attentionFactor
+        self.mscale = mscale
+        self.mscaleAllDim = mscaleAllDim
         self.betaFast = betaFast
         self.betaSlow = betaSlow
         self.shortFactor = shortFactor
         self.longFactor = longFactor
         self.lowFreqFactor = lowFreqFactor
         self.highFreqFactor = highFreqFactor
+        self.truncate = truncate
     }
 
     init(fromConfig config: Config) {
@@ -115,26 +136,33 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
         factor = config["factor", Double.self]
         originalMaxPositionEmbeddings = config["original_max_position_embeddings", Int.self]
         attentionFactor = config["attention_factor", Double.self]
+        mscale = config["mscale", Double.self]
+        mscaleAllDim = config["mscale_all_dim", Double.self]
         betaFast = config["beta_fast", Double.self]
         betaSlow = config["beta_slow", Double.self]
         shortFactor = config["short_factor", [Double].self]
         longFactor = config["long_factor", [Double].self]
         lowFreqFactor = config["low_freq_factor", Double.self]
         highFreqFactor = config["high_freq_factor", Double.self]
+        truncate = config["truncate", Bool.self]
     }
 
+    /// Coding keys for JSON conversions.
     enum CodingKeys: String, CodingKey {
         case ropeTheta = "rope_theta"
         case ropeType = "rope_type"
         case factor
         case originalMaxPositionEmbeddings = "original_max_position_embeddings"
         case attentionFactor = "attention_factor"
+        case mscale
+        case mscaleAllDim = "mscale_all_dim"
         case betaFast = "beta_fast"
         case betaSlow = "beta_slow"
         case shortFactor = "short_factor"
         case longFactor = "long_factor"
         case lowFreqFactor = "low_freq_factor"
         case highFreqFactor = "high_freq_factor"
+        case truncate
     }
 
     /// Converts the RoPE parameters to a dictionary representation.
@@ -145,33 +173,20 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
             "rope_type": ropeType.rawValue,
         ]
 
-        if let factor = factor {
-            dict["factor"] = factor
-        }
+        if let factor { dict["factor"] = factor }
         if let originalMaxPositionEmbeddings = originalMaxPositionEmbeddings {
             dict["original_max_position_embeddings"] = originalMaxPositionEmbeddings
         }
-        if let attentionFactor = attentionFactor {
-            dict["attention_factor"] = attentionFactor
-        }
-        if let betaFast = betaFast {
-            dict["beta_fast"] = betaFast
-        }
-        if let betaSlow = betaSlow {
-            dict["beta_slow"] = betaSlow
-        }
-        if let shortFactor = shortFactor {
-            dict["short_factor"] = shortFactor
-        }
-        if let longFactor = longFactor {
-            dict["long_factor"] = longFactor
-        }
-        if let lowFreqFactor = lowFreqFactor {
-            dict["low_freq_factor"] = lowFreqFactor
-        }
-        if let highFreqFactor = highFreqFactor {
-            dict["high_freq_factor"] = highFreqFactor
-        }
+        if let attentionFactor = attentionFactor { dict["attention_factor"] = attentionFactor }
+        if let mscale { dict["mscale"] = mscale }
+        if let mscaleAllDim { dict["mscale_all_dim"] = mscaleAllDim }
+        if let betaFast = betaFast { dict["beta_fast"] = betaFast }
+        if let betaSlow = betaSlow { dict["beta_slow"] = betaSlow }
+        if let shortFactor = shortFactor { dict["short_factor"] = shortFactor }
+        if let longFactor = longFactor { dict["long_factor"] = longFactor }
+        if let lowFreqFactor = lowFreqFactor { dict["low_freq_factor"] = lowFreqFactor }
+        if let highFreqFactor = highFreqFactor { dict["high_freq_factor"] = highFreqFactor }
+        if let truncate = truncate { dict["truncate"] = truncate }
 
         return dict
     }
@@ -199,19 +214,21 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
             factor: dictionary["factor"] as? Double,
             originalMaxPositionEmbeddings: dictionary["original_max_position_embeddings"] as? Int,
             attentionFactor: dictionary["attention_factor"] as? Double,
+            mscale: dictionary["mscale"] as? Double,
+            mscaleAllDim: dictionary["mscale_all_dim"] as? Double,
             betaFast: dictionary["beta_fast"] as? Double,
             betaSlow: dictionary["beta_slow"] as? Double,
             shortFactor: dictionary["short_factor"] as? [Double],
             longFactor: dictionary["long_factor"] as? [Double],
             lowFreqFactor: dictionary["low_freq_factor"] as? Double,
-            highFreqFactor: dictionary["high_freq_factor"] as? Double
+            highFreqFactor: dictionary["high_freq_factor"] as? Double,
+            truncate: dictionary["truncate"] as? Bool
         )
     }
 
     /// Validates the RoPE parameters based on the RoPE type.
     /// - Throws: ValidationError if the parameters are invalid for the specified RoPE type.
     func validate() throws {
-        // Type-specific validation
         switch ropeType {
         case .linear:
             try validateLinearParameters()
@@ -229,80 +246,76 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
         }
     }
 
-    // MARK: - Private Validation Methods
-
     private func validateLinearParameters() throws {
         guard let factor = factor, factor >= 1.0 else {
-            throw ValidationError.invalidFactor("Linear RoPE requires factor >= 1.0")
+            throw RopeValidationError.invalidFactor("Linear RoPE requires factor >= 1.0")
         }
     }
 
     private func validateDynamicParameters() throws {
         guard let factor = factor, factor >= 1.0 else {
-            throw ValidationError.invalidFactor("Dynamic RoPE requires factor >= 1.0")
+            throw RopeValidationError.invalidFactor("Dynamic RoPE requires factor >= 1.0")
         }
     }
 
     private func validateYarnParameters() throws {
         guard let factor = factor, factor >= 1.0 else {
-            throw ValidationError.invalidFactor("Yarn RoPE requires factor >= 1.0")
+            throw RopeValidationError.invalidFactor("Yarn RoPE requires factor >= 1.0")
         }
 
         if let attentionFactor = attentionFactor, attentionFactor <= 0 {
-            throw ValidationError.invalidParameter("attention_factor must be > 0")
+            throw RopeValidationError.invalidParameter("attention_factor must be > 0")
         }
 
         let betaFastValue = betaFast ?? 32.0
         let betaSlowValue = betaSlow ?? 1.0
 
         if betaFastValue < betaSlowValue {
-            throw ValidationError.invalidParameter("beta_fast must be >= beta_slow")
+            throw RopeValidationError.invalidParameter("beta_fast must be >= beta_slow")
         }
     }
 
     private func validateLongRopeParameters() throws {
         guard let shortFactor = shortFactor else {
-            throw ValidationError.missingParameter("short_factor is required for longrope")
+            throw RopeValidationError.missingParameter("short_factor is required for longrope")
         }
 
         guard let longFactor = longFactor else {
-            throw ValidationError.missingParameter("long_factor is required for longrope")
+            throw RopeValidationError.missingParameter("long_factor is required for longrope")
         }
 
         // Note: actual length validation would require config context
         // Here we just ensure they're non-empty
         if shortFactor.isEmpty {
-            throw ValidationError.invalidParameter("short_factor cannot be empty")
+            throw RopeValidationError.invalidParameter("short_factor cannot be empty")
         }
 
         if longFactor.isEmpty {
-            throw ValidationError.invalidParameter("long_factor cannot be empty")
+            throw RopeValidationError.invalidParameter("long_factor cannot be empty")
         }
     }
 
     private func validateLlama3Parameters() throws {
         guard let factor = factor, factor >= 1.0 else {
-            throw ValidationError.invalidFactor("Llama3 RoPE requires factor >= 1.0")
+            throw RopeValidationError.invalidFactor("Llama3 RoPE requires factor >= 1.0")
         }
 
         guard originalMaxPositionEmbeddings != nil else {
-            throw ValidationError.missingParameter("original_max_position_embeddings is required for llama3")
+            throw RopeValidationError.missingParameter("original_max_position_embeddings is required for llama3")
         }
 
         guard let lowFreqFactor = lowFreqFactor else {
-            throw ValidationError.missingParameter("low_freq_factor is required for llama3")
+            throw RopeValidationError.missingParameter("low_freq_factor is required for llama3")
         }
 
         guard let highFreqFactor = highFreqFactor else {
-            throw ValidationError.missingParameter("high_freq_factor is required for llama3")
+            throw RopeValidationError.missingParameter("high_freq_factor is required for llama3")
         }
 
         if highFreqFactor <= lowFreqFactor {
-            throw ValidationError.invalidParameter("high_freq_factor must be > low_freq_factor")
+            throw RopeValidationError.invalidParameter("high_freq_factor must be > low_freq_factor")
         }
     }
-
-    // MARK: - CustomStringConvertible
 
     var description: String {
         let dict = toDictionary()
@@ -325,28 +338,8 @@ struct RopeParameters: Codable, Equatable, CustomStringConvertible {
             lhs.shortFactor == rhs.shortFactor &&
             lhs.longFactor == rhs.longFactor &&
             lhs.lowFreqFactor == rhs.lowFreqFactor &&
-            lhs.highFreqFactor == rhs.highFreqFactor
-    }
-}
-
-/// Error types for RoPE parameter validation.
-enum ValidationError: Error, CustomStringConvertible {
-    case invalidRopeType(String)
-    case invalidFactor(String)
-    case invalidParameter(String)
-    case missingParameter(String)
-
-    var description: String {
-        switch self {
-        case let .invalidRopeType(type):
-            return "Invalid RoPE type: \(type). Must be one of: default, linear, dynamic, yarn, longrope, llama3"
-        case let .invalidFactor(message):
-            return "Invalid factor: \(message)"
-        case let .invalidParameter(message):
-            return "Invalid parameter: \(message)"
-        case let .missingParameter(message):
-            return "Missing required parameter: \(message)"
-        }
+            lhs.highFreqFactor == rhs.highFreqFactor &&
+            lhs.truncate == rhs.truncate
     }
 }
 

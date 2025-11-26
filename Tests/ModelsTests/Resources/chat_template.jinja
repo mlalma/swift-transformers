@@ -1,0 +1,51 @@
+{{- bos_token }}
+{%- if messages[0]['role'] == 'system' -%}
+    {%- if messages[1] is not defined or messages[1]['role'] != 'user' -%}
+        {{- raise_exception("System message must be followed by a user message") }}
+    {%- endif -%}
+    {%- set system_content = messages[0]['content'] -%}
+    {%- set loop_messages = messages[1:] -%}
+    {%- set first_user_has_system = true -%}
+{%- else -%}
+    {%- set system_content = "" -%}
+    {%- set loop_messages = messages -%}
+    {%- set first_user_has_system = false -%}
+{%- endif -%}
+{%- for message in loop_messages -%}
+    {%- if message['role'] == 'user' -%}
+        {{- '<|user_start|>' }}
+        {%- if loop.first and first_user_has_system -%}
+            {{- system_content + '\n\n' }}
+        {%- endif -%}
+        {%- if message['content'] is not string -%}
+            {{- raise_exception("User messages must contain string content") }}
+        {%- endif -%}
+        {{- message['content'] }}
+        {{- '<|user_end|>' }}
+    {%- elif message['role'] == 'assistant' -%}
+        {{- '<|assistant_start|>' }}
+        {%- if message['content'] is string -%}
+            {{- message['content'] }}
+        {%- elif message['content'] is iterable -%}
+            {%- for part in message['content'] -%}
+                {%- if part['type'] == 'text' -%}
+                    {{- part.get('text', '') }}
+                {%- elif part['type'] == 'python' -%}
+                    {{- '<|python_start|>' + part.get('text', '') + '<|python_end|>' }}
+                {%- elif part['type'] == 'python_output' -%}
+                    {{- '<|output_start|>' + part.get('text', '') + '<|output_end|>' }}
+                {%- else -%}
+                    {{- raise_exception("Unknown assistant content part: " + part['type']) }}
+                {%- endif -%}
+            {%- endfor -%}
+        {%- else -%}
+            {{- raise_exception("Unsupported assistant content type") }}
+        {%- endif -%}
+        {{- '<|assistant_end|>' }}
+    {%- else -%}
+        {{- raise_exception("Unexpected message role: " + message['role'] + ". Only 'user' and 'assistant' roles are supported after the optional initial system message.") }}
+    {%- endif -%}
+{%- endfor -%}
+{%- if add_generation_prompt -%}
+    {{- '<|assistant_start|>' }}
+{%- endif -%}

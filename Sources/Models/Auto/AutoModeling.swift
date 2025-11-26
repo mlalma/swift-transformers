@@ -1,8 +1,8 @@
 import Foundation
 
-// 1. Configuration loading phase
-// 2. Model class determination phase
-// 3. Model weight loading phase
+// x 1. Configuration loading phase
+// x 2. Model class determination phase
+// - 3. Model weight loading phase
 // 4. Post processing
 
 public class AutoModelForCausalLM: BaseAutoModelClass {
@@ -10,8 +10,8 @@ public class AutoModelForCausalLM: BaseAutoModelClass {
         super.init()
     }
 
-    public class func fromPretrained(_ pretrainedModelNameOrPath: String, modelArguments: [String: Any]) async -> PreTrainedModel? {
+    public class func from(pretrained pretrainedModelNameOrPath: String, modelArguments: [String: Any]) async -> PreTrainedModel? {
         let model = AutoModelForCausalLM()
-        return await model.fromPretrained(pretrainedModelNameOrPath, modelArguments: modelArguments, modelMapping: ModelMapping.causalLMNames)
+        return await model.from(pretrained: pretrainedModelNameOrPath, modelArguments: modelArguments, modelMapping: ModelMapping.causalLMNames)
     }
 }

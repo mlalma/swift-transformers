@@ -1,7 +1,8 @@
 import Foundation
 import MLX
+import MLXNN
 
-public class PreTrainedModel {
+public class PreTrainedModel : Module {
     /// Hook to add instantiators to .pt file reader for resolving classes during the model loading.
     /// Should be overridden by derived model class in case it needs to add some specific instantiators to be able to read .pt / .bin files
     func addInstantiators() {
@@ -9,7 +10,7 @@ public class PreTrainedModel {
     
     /// Entry point to add intialized weights to the model.
     /// Should be overridden by the derived model class.
-    func loadWeightsToModel(_ weights: [String: MLXArray]) {
+    func loadWeightsToModel(_ weights: [String: MLXArray]) throws {
         ModelUtils.log("Should be overridden by the derived model class")
     }
 }

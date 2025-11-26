@@ -2,7 +2,7 @@ import Foundation
 import Hub
 
 /// Configuration class to store the configuration of a NanoChatModel.
-class NanoChatConfig: PreTrainedConfig {
+final class NanoChatConfig: PreTrainedConfig {
     /// Keys to ignore during inference when looking at model outputs.
     static let keysToIgnoreAtInference: [String] = ["past_key_values"]
 

@@ -2,7 +2,7 @@ import Foundation
 import MLX
 
 extension ModelUtils {
-    /// Maps PyTorch storage class names to MLX data types.
+    /// Maps PyTorch storage class names to MLX data types from given config.
     static func dtype(_ dtypeStr: String?) -> DType? {
         guard let dtypeStr else { return nil }
 

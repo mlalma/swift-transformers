@@ -46,7 +46,7 @@ extension ModelUtils {
     static func downloadUrl(_ url: String) async throws -> String {
         guard let downloadURL = URL(string: url) else {
             ModelUtils.log("Error: Invalid URL string: \(url)")
-            throw AutoModelError.invalidConfig
+            throw AutoModelError.invalidConfig()
         }
 
         // Create a temporary file URL with random filename
@@ -64,7 +64,7 @@ extension ModelUtils {
               (200 ... 299).contains(httpResponse.statusCode)
         else {
             ModelUtils.log("Error: Invalid response type")
-            throw AutoModelError.invalidConfig
+            throw AutoModelError.invalidConfig()
         }
 
         do {
