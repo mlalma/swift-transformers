@@ -22,7 +22,7 @@ final class NanoChatConfig: PreTrainedConfig {
     var hiddenSize: Int
     var initializerRange: Double
     var intermediateSize: Int
-    var finalLogitSoftcapping: Double
+    var finalLogitSoftcapping: Double?
     var maxPositionEmbeddings: Int
     var numAttentionHeads: Int
     var numHiddenLayers: Int
@@ -42,7 +42,7 @@ final class NanoChatConfig: PreTrainedConfig {
         hiddenSize: Int = Constants.hiddenSize,
         initializerRange: Double = Constants.initializerRange,
         intermediateSize: Int = Constants.intermediateSize,
-        finalLogitSoftcapping: Double = Constants.finalLogitSoftcapping,
+        finalLogitSoftcapping: Double? = Constants.finalLogitSoftcapping,
         maxPositionEmbeddings: Int = Constants.maxPositionEmbeddings,
         numAttentionHeads: Int = Constants.numAttentionHeads,
         numHiddenLayers: Int = Constants.numHiddenLayers,
